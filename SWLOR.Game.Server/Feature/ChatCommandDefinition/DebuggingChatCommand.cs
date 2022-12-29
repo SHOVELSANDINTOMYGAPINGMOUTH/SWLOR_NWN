@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using SWLOR.Game.Server.Core;
+using SWLOR.Game.Server.Core.NWNX;
+using SWLOR.Game.Server.Core.NWNX.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Enumeration;
 using SWLOR.Game.Server.Service.ChatCommandService;
@@ -12,6 +14,7 @@ namespace SWLOR.Game.Server.Feature.ChatCommandDefinition
         public Dictionary<string, ChatCommandDetail> BuildChatCommands()
         {
             //MoveDoor();
+            //Test();
 
             return _builder.Build();
         }
@@ -66,6 +69,56 @@ namespace SWLOR.Game.Server.Feature.ChatCommandDefinition
                     SetLocalObject(placeable, "PROPERTY_DOOR", door);
 
                     SendMessageToPC(user, $"{orientationOverride} {sqrtValue}");
+                });
+        }
+
+        private void Test()
+        {
+            void SetTileData(string overrideName, int tileIndex, int tileId, int tileOrientation)
+            {
+                var customTile = new CustomTileData()
+                {
+                    TileId = tileId,
+                    Orientation = tileOrientation,
+                    Height = 0,
+                    MainLightColor1 = TileMainLightColor.BrightWhite,
+                    MainLightColor2 = TileMainLightColor.BrightWhite,
+                    SourceLightColor1 = TileSourceLightColor.PaleYellow,
+                    SourceLightColor2 = TileSourceLightColor.PaleYellow,
+                    AnimationLoop1 = true,
+                    AnimationLoop2 = true,
+                    AnimationLoop3 = true
+                };
+
+                TilesetPlugin.SetOverrideTileData(overrideName, tileIndex, customTile);
+            }
+
+            _builder.Create("test")
+                .Description("Debugging")
+                .Permissions(AuthorizationLevel.Admin)
+                .Action((user, target, location, args) =>
+                {
+                    const string OverrideName = "MyTileOverride";
+                    var tileset = TilesetResref.Rural;
+                    const int Width = 3;
+                    const int Height = 3;
+
+                    TilesetPlugin.CreateTileOverride(OverrideName, tileset, Width, Height);
+
+                    SetTileData(OverrideName, 0, 35, 2);
+                    SetTileData(OverrideName, 1, 36, 3);
+                    SetTileData(OverrideName, 2, 35, 3);
+
+                    SetTileData(OverrideName, 3, 36, 2);
+                    SetTileData(OverrideName, 4, 120, 0);
+                    SetTileData(OverrideName, 5, 36, 0);
+
+                    SetTileData(OverrideName, 6, 35, 1);
+                    SetTileData(OverrideName, 7, 36, 1);
+                    SetTileData(OverrideName, 8, 35, 0);
+
+                    TilesetPlugin.SetAreaTileOverride("area_template", OverrideName);
+                    CreateArea("area_template", "MY_COOL_AREA", "Optional Cool Name");
                 });
         }
     }

@@ -247,10 +247,10 @@ namespace SWLOR.Game.Server.Core.NWNX
             NWNX_PushArgumentInt(customTileData.AnimationLoop3 ? 1 : 0);
             NWNX_PushArgumentInt(customTileData.AnimationLoop2 ? 1 : 0);
             NWNX_PushArgumentInt(customTileData.AnimationLoop1 ? 1 : 0);
-            NWNX_PushArgumentInt(customTileData.SourceLightColor2);
-            NWNX_PushArgumentInt(customTileData.SourceLightColor1);
-            NWNX_PushArgumentInt(customTileData.MainLightColor2);
-            NWNX_PushArgumentInt(customTileData.MainLightColor1);
+            NWNX_PushArgumentInt((int)customTileData.SourceLightColor2);
+            NWNX_PushArgumentInt((int)customTileData.SourceLightColor1);
+            NWNX_PushArgumentInt((int)customTileData.MainLightColor2);
+            NWNX_PushArgumentInt((int)customTileData.MainLightColor1);
             NWNX_PushArgumentInt(customTileData.Height);
             NWNX_PushArgumentInt(customTileData.Orientation);
             NWNX_PushArgumentInt(customTileData.TileId);
