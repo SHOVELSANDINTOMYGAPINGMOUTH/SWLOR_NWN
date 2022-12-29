@@ -1,0 +1,18 @@
+﻿namespace SWLOR.Game.Server.Service.TilesetService
+{
+    public class TileDetail
+    {
+        public int TileId { get; set; }
+        public int Orientation { get; set; }
+        public int Height { get; set; }
+        public string TopLeft { get; set; }
+        public string Top { get; set; }
+        public string TopRight { get; set; }
+        public string Right { get; set; }
+        public string BottomRight { get; set; }
+        public string Bottom { get; set; }
+        public string BottomLeft { get; set; }
+        public string Left { get; set; }
+        public string TerrainAndCrossers { get; set; }
+    }
+}

@@ -29,7 +29,7 @@ namespace SWLOR.Game.Server.Core.NWNX
                 GroupCount = NWNX_GetReturnValueInt(),
                 CrosserCount = NWNX_GetReturnValueInt(),
                 TerrainCount = NWNX_GetReturnValueInt(),
-                HeightTransition = NWNX_GetReturnValueInt(),
+                HeightTransition = NWNX_GetReturnValueFloat(),
                 TileCount = NWNX_GetReturnValueInt(),
             };
         }
