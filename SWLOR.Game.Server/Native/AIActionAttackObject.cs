@@ -107,6 +107,11 @@ namespace SWLOR.Game.Server.Native
                 return v.X * v.X + v.Y * v.Y + v.Z * v.Z;
             }
 
+            private float Square(float val)
+            {
+                return val * val;
+            }
+
             public bool IsTargetInRange(CNWSObject target)
             {
                 if (Creature.m_oidArea != target.m_oidArea)
@@ -123,7 +128,7 @@ namespace SWLOR.Game.Server.Native
                         Creature.m_vPosition.y - target.m_vPosition.y,
                         Creature.m_vPosition.z - target.m_vPosition.z));
                 
-                var maxDistance = Math.Sqrt(Creature.MaxAttackRange(target.m_idSelf) + 0.01f);
+                var maxDistance = Square(Creature.MaxAttackRange(target.m_idSelf) + 0.01f);
 
                 if (distance > maxDistance)
                 {
@@ -139,7 +144,7 @@ namespace SWLOR.Game.Server.Native
 
                 Scheduler.Schedule(() =>
                 {
-                    var target = NWNXLib.AppManager().m_pServerExoApp.GetGameObject(Target).AsNWSObject();
+                    var target = NWNXLib.AppManager().m_pServerExoApp.GetGameObject(Target)?.AsNWSObject();
 
                     if (target != null)
                     {
@@ -149,7 +154,7 @@ namespace SWLOR.Game.Server.Native
                                 Creature.m_vPosition.y - target.m_vPosition.y,
                                 Creature.m_vPosition.z - target.m_vPosition.z));
 
-                        var desiredDistance = Math.Sqrt(Creature.DesiredAttackRange(Target));
+                        var desiredDistance = Square(Creature.DesiredAttackRange(Target));
 
                         if (Math.Abs(distance - desiredDistance) > 0.25f)
                             Creature.DoCombatStep(0, 1000, Target);
@@ -166,7 +171,7 @@ namespace SWLOR.Game.Server.Native
                 var duration = Random.Next(3000);
                 Scheduler.Schedule(() =>
                 {
-                    var target = NWNXLib.AppManager().m_pServerExoApp.GetGameObject(Target).AsNWSObject();
+                    var target = NWNXLib.AppManager().m_pServerExoApp.GetGameObject(Target)?.AsNWSObject();
 
                     if (target != null)
                     {
