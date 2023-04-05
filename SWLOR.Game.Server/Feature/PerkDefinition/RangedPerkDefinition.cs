@@ -36,6 +36,7 @@ namespace SWLOR.Game.Server.Feature.PerkDefinition
             RifleMastery();
             TranquilizerShot();
             CripplingShot();
+            ZenMarksmanship();
 
             return _builder.Build();
         }
@@ -340,7 +341,7 @@ namespace SWLOR.Game.Server.Feature.PerkDefinition
                 .GrantsFeat(FeatType.WeaponFocusThrowingWeapons)
 
                 .AddPerkLevel()
-                .Description("Your base damage with staves is increased by 2 DMG.")
+                .Description("Your base damage with throwing weapons is increased by 2 DMG.")
                 .Price(4)
                 .RequirementSkill(SkillType.Ranged, 15)
                 .GrantsFeat(FeatType.WeaponSpecializationThrowingWeapons);
@@ -657,6 +658,19 @@ namespace SWLOR.Game.Server.Feature.PerkDefinition
                 .RequirementSkill(SkillType.Ranged, 35)
                 .RequirementCharacterType(CharacterType.Standard)
                 .GrantsFeat(FeatType.CripplingShot3);
+        }
+
+        private void ZenMarksmanship()
+        {
+            _builder.Create(PerkCategoryType.RangedGeneral, PerkType.ZenMarksmanship)
+                .Name("Zen Marksmanship")
+
+                .AddPerkLevel()
+                .Description("Your ranged attacks now use Willpower for damage if your Willpower is higher than your weapon's damage stat.")
+                .Price(3)
+                .RequirementSkill(SkillType.Ranged, 5)
+                .RequirementCharacterType(CharacterType.Standard)
+                .GrantsFeat(FeatType.ZenMarksmanship);
         }
     }
 }
