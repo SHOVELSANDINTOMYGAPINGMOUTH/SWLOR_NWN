@@ -33,7 +33,7 @@ namespace SWLOR.Game.Server.Core.NWScript
             var oldObjectSelf = OBJECT_SELF;
             OBJECT_SELF = oTarget;
             // Note: Bypass the NWScript round-trip and directly call the script execution.
-            Internal.DirectRunScript(sScript, oTarget);
+            //Internal.DirectRunScript(sScript, oTarget); // todo: fix this!
             OBJECT_SELF = oldObjectSelf;
         }
     }

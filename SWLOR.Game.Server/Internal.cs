@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using McMaster.NETCore.Plugins;
 using SWLOR.Game.Server.Core.Async;
 using SWLOR.Game.Server.Core.NWNX;
+using SWLOR.Game.Server.Core.Plugins;
 using SWLOR.Game.Server.Extension;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.LogService;
@@ -38,12 +41,14 @@ namespace SWLOR.Game.Server.Core
 
         private static ICoreEventHandler _coreGameManager;
 
+        private static readonly List<PluginLoader> _pluginLoaders = new();
+
         public static int Bootstrap(IntPtr nativeHandlesPtr, int nativeHandlesLength)
         {
-
             Environment.SetEnvironmentVariable("GAME_SERVER_CONTEXT", "true");
+            LoadPlugins();
 
-            var retVal = NWNCore.Init(nativeHandlesPtr, nativeHandlesLength, out CoreGameManager coreGameManager);
+            var retVal = NWNCore.Init(nativeHandlesPtr, nativeHandlesLength, out var coreGameManager);
             coreGameManager.OnSignal += OnSignal;
             coreGameManager.OnServerLoop += OnServerLoop;
             coreGameManager.OnRunScript += OnRunScript;
@@ -60,6 +65,39 @@ namespace SWLOR.Game.Server.Core
             Console.WriteLine("Scripts registered successfully.");
 
             return retVal;
+        }
+
+        private static void LoadPlugins()
+        {
+            foreach (var dir in Directory.GetDirectories("/nwn/home/dotnet/plugins/"))
+            {
+                var dirName = Path.GetFileName(dir);
+                var pluginDll = Path.Combine(dir, "SWLOR." + dirName + ".dll");
+
+                if (File.Exists(pluginDll))
+                {
+                    var loader = PluginLoader.CreateFromAssemblyFile(
+                        pluginDll,
+                        sharedTypes: new[] { typeof(IPlugin) },
+                        isUnloadable: true);
+                    _pluginLoaders.Add(loader);
+                }
+            }
+
+            // Create an instance of plugin types
+            foreach (var loader in _pluginLoaders)
+            {
+                foreach (var pluginType in loader
+                             .LoadDefaultAssembly()
+                             .GetTypes()
+                             .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract))
+                {
+                    // This assumes the implementation of IPlugin has a parameterless constructor
+                    var plugin = (IPlugin)Activator.CreateInstance(pluginType);
+
+                    Console.WriteLine($"Loaded plugin: '{plugin?.Bootstrap()}'");
+                }
+            }
         }
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs ex)

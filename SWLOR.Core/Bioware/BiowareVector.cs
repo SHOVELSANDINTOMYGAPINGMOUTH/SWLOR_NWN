@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using static System.Math;
+using static SWLOR.Game.Server.Core.NWScript.NWScript;
 
 namespace SWLOR.Game.Server.Core.Bioware
 {

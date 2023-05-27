@@ -2,7 +2,6 @@ using System;
 using System.Numerics;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum.Creature;
-using SWLOR.Game.Server.Entity;
 
 
 namespace SWLOR.Game.Server.Core.NWScript

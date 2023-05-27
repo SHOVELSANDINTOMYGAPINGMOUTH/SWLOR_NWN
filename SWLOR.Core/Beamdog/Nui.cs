@@ -1,4 +1,7 @@
-﻿namespace SWLOR.Game.Server.Core.Beamdog
+﻿
+using static SWLOR.Game.Server.Core.NWScript.NWScript;
+
+namespace SWLOR.Game.Server.Core.Beamdog
 {
     public static class Nui
     {
