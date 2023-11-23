@@ -7010,6 +7010,17 @@
                     "__struct_id": 0,
                     "NAME": {
                       "type": "cexostring",
+                      "value": "Vemon Spider Claw"
+                    },
+                    "RESREF": {
+                      "type": "resref",
+                      "value": "vemonspiderclaw"
+                    }
+                  },
+                  {
+                    "__struct_id": 0,
+                    "NAME": {
+                      "type": "cexostring",
                       "value": "Warocas Bite"
                     },
                     "RESREF": {
@@ -9439,6 +9450,17 @@
                     "RESREF": {
                       "type": "resref",
                       "value": "v_raptor_skin"
+                    }
+                  },
+                  {
+                    "__struct_id": 0,
+                    "NAME": {
+                      "type": "cexostring",
+                      "value": "Vemon Spider"
+                    },
+                    "RESREF": {
+                      "type": "resref",
+                      "value": "vemonspider"
                     }
                   },
                   {
@@ -33561,6 +33583,39 @@
                     "__struct_id": 0,
                     "NAME": {
                       "type": "cexostring",
+                      "value": "Spider Guts"
+                    },
+                    "RESREF": {
+                      "type": "resref",
+                      "value": "spider_guts"
+                    }
+                  },
+                  {
+                    "__struct_id": 0,
+                    "NAME": {
+                      "type": "cexostring",
+                      "value": "Spider Leg"
+                    },
+                    "RESREF": {
+                      "type": "resref",
+                      "value": "spider_leg"
+                    }
+                  },
+                  {
+                    "__struct_id": 0,
+                    "NAME": {
+                      "type": "cexostring",
+                      "value": "Spider Thread"
+                    },
+                    "RESREF": {
+                      "type": "resref",
+                      "value": "spider_thread"
+                    }
+                  },
+                  {
+                    "__struct_id": 0,
+                    "NAME": {
+                      "type": "cexostring",
                       "value": "Staffrylia"
                     },
                     "RESREF": {
@@ -39389,6 +39444,17 @@
                     "RESREF": {
                       "type": "resref",
                       "value": "dath_hsoup"
+                    }
+                  },
+                  {
+                    "__struct_id": 0,
+                    "NAME": {
+                      "type": "cexostring",
+                      "value": "Dathomir Pie"
+                    },
+                    "RESREF": {
+                      "type": "resref",
+                      "value": "dathomir_pie"
                     }
                   },
                   {
