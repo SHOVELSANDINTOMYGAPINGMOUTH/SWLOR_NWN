@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Service.PropertyService;
-using SWLOR.Game.Server.Entity;
-using SWLOR.Game.Server.Service.DBService;
 
 namespace SWLOR.Game.Server.Service
 {
@@ -104,10 +103,10 @@ namespace SWLOR.Game.Server.Service
                 PlayersByArea[area].Add(player);
 
             // Handle DM created Area Notes
-            var query = new DBQuery<AreaNote>()
-                .AddFieldSearch(nameof(AreaNote.AreaResref), GetResRef(area), false)
-                .OrderBy(nameof(AreaNote.AreaResref));
-            var notes = DB.Search(query)
+            var resref = GetResRef(area);
+            var notes = DB.AreaNotes
+                .Where(x => x.AreaResref == resref)
+                .OrderBy(o => o.AreaResref)
                 .ToList();
 
             if (notes.Count > 0)

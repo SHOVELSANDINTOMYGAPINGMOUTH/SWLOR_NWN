@@ -5,7 +5,6 @@ using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Feature.GuiDefinition.Payload;
 using SWLOR.Game.Server.Service;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.GuiService;
 using SWLOR.Game.Server.Service.GuiService.Component;
 using SWLOR.Game.Server.Service.PropertyService;
@@ -211,7 +210,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                     var properties = DB.WorldProperties.Where(x =>
                         x.PropertyType == PropertyType.Apartment &&
                         propertyIds.Contains(x.Id) &&
-                        !x.IsQueuedForDeletion);
+                        x.IsQueuedForDeletion == false);
 
                     foreach (var property in properties)
                     {

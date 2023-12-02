@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Newtonsoft.Json;
 using NRediSearch;
 using Redis.OM;
@@ -9,7 +8,6 @@ using Redis.OM.Searching;
 using StackExchange.Redis;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Entity;
-using SWLOR.Game.Server.Service.DBService;
 
 namespace SWLOR.Game.Server.Service
 {
@@ -167,28 +165,6 @@ namespace SWLOR.Game.Server.Service
             _cachedEntities.Remove(id);
         }
 
-        /// <summary>
-        /// Escapes tokens used in Redis queries.
-        /// </summary>
-        /// <param name="str">The string to escape</param>
-        /// <returns>A string containing escaped tokens.</returns>
-        public static string EscapeTokens(string str)
-        {
-            return str
-                .Replace("@", "\\@")
-                .Replace("!", "\\!")
-                .Replace("{", "\\{")
-                .Replace("}", "\\}")
-                .Replace("(", "\\(")
-                .Replace(")", "\\)")
-                .Replace("|", "\\|")
-                .Replace("-", "\\-")
-                .Replace("=", "\\=")
-                .Replace(">", "\\>")
-                .Replace("'", "\\'")
-                .Replace("\"", "\\\"");
-        }
-
         public static IRedisCollection<Account> Accounts => _provider.RedisCollection<Account>();
         public static IRedisCollection<AreaNote> AreaNotes => _provider.RedisCollection<AreaNote>();
         public static IRedisCollection<AuthorizedDM> AuthorizedDMs => _provider.RedisCollection<AuthorizedDM>();
@@ -207,60 +183,5 @@ namespace SWLOR.Game.Server.Service
         public static IRedisCollection<WorldProperty> WorldProperties => _provider.RedisCollection<WorldProperty>();
         public static IRedisCollection<WorldPropertyCategory> WorldPropertyCategories => _provider.RedisCollection<WorldPropertyCategory>();
         public static IRedisCollection<WorldPropertyPermission> WorldPropertyPermissions => _provider.RedisCollection<WorldPropertyPermission>();
-
-
-        /// <summary>
-        /// Searches the Redis DB for records matching the query criteria.
-        /// </summary>
-        /// <typeparam name="T">The type of entity to retrieve.</typeparam>
-        /// <param name="query">The query to run.</param>
-        /// <returns>An enumerable of entities matching the criteria.</returns>
-        public static IEnumerable<T> Search<T>(DBQuery<T> query)
-            where T : EntityBase
-        {
-            var result = _searchClientsByType[typeof(T)].Search(query.BuildQuery());
-
-            foreach (var doc in result.Documents)
-            {
-                // Remove the 'Index:' prefix.
-                var recordId = doc.Id.Remove(0, 6);
-                yield return _provider.RedisCollection<T>().FindById(recordId);
-            }
-        }
-
-        /// <summary>
-        /// Searches the Redis DB for raw JSON records matching the query criteria.
-        /// </summary>
-        /// <typeparam name="T">The type of entity to retrieve.</typeparam>
-        /// <param name="query">The query to run.</param>
-        /// <returns>An enumerable of raw json values matching the criteria.</returns>
-        public static IEnumerable<string> SearchRawJson<T>(DBQuery<T> query)
-            where T : EntityBase
-        {
-            var result = _searchClientsByType[typeof(T)].Search(query.BuildQuery());
-
-            foreach (var doc in result.Documents)
-            {
-                // Remove the 'Index:' prefix.
-                var recordId = doc.Id.Remove(0, 6);
-                var entity = _provider.RedisCollection<T>().FindById(recordId);
-                yield return JsonConvert.SerializeObject(entity);
-            }
-        }
-
-        /// <summary>
-        /// Searches the Redis DB for the number of records matching the query criteria.
-        /// This only retrieves the number of records. Use Search() if you need the actual results.
-        /// </summary>
-        /// <typeparam name="T">The type of entity to retrieve.</typeparam>
-        /// <param name="query">The query to run.</param>
-        /// <returns>The number of records matching the query criteria.</returns>
-        public static long SearchCount<T>(DBQuery<T> query)
-            where T : EntityBase
-        {
-            var result = _searchClientsByType[typeof(T)].Search(query.BuildQuery(true));
-
-            return result.TotalResults;
-        }
     }
 }

@@ -103,7 +103,7 @@ namespace SWLOR.Game.Server.Entity
         /// from the database the next time the server boots up.
         /// This is delayed to avoid lag and situations where players could log into a deleted property.
         /// </summary>
-        [Indexed]
+        [Searchable]
         public bool IsQueuedForDeletion { get; set; }
 
         /// <summary>

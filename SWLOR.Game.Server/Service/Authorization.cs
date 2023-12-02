@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Linq;
-using SWLOR.Game.Server.Entity;
-using SWLOR.Game.Server.Service.DBService;
 using AuthorizationLevel = SWLOR.Game.Server.Enumeration.AuthorizationLevel;
 
 namespace SWLOR.Game.Server.Service
@@ -24,10 +21,8 @@ namespace SWLOR.Game.Server.Service
                 if (cdKey == superAdminCDKey)
                     return AuthorizationLevel.Admin;
             }
-
-            var query = new DBQuery<AuthorizedDM>()
-                .AddFieldSearch(nameof(AuthorizedDM.CDKey), cdKey, false);
-            var existing = DB.Search(query).FirstOrDefault();
+            
+            var existing = DB.AuthorizedDMs.FirstOrDefault(x => x.CDKey == cdKey);
             if (existing == null)
                 return AuthorizationLevel.Player;
 

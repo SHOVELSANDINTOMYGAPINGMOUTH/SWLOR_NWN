@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NWN.Native.API;
 using SWLOR.Game.Server.Core.NWScript.Enum;
-using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.BeastMasteryService;
 
 namespace SWLOR.CLI

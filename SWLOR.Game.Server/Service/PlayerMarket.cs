@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWScript.Enum.Item;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Enumeration;
 using SWLOR.Game.Server.Extension;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.PlayerMarketService;
 using SWLOR.Game.Server.Service.PropertyService;
 using MarketCategoryType = SWLOR.Game.Server.Service.PlayerMarketService.MarketCategoryType;
@@ -35,11 +35,7 @@ namespace SWLOR.Game.Server.Service
         [NWNEventHandler("mod_load")]
         public static void RemoveOldListings()
         {
-            var query = new DBQuery<MarketItem>()
-                .AddFieldSearch(nameof(MarketItem.IsListed), true);
-            var count = (int)DB.SearchCount(query);
-            var listings = DB.Search(query
-                .AddPaging(count, 0));
+            var listings = DB.MarketItems.Where(x => x.IsListed);
             var now = DateTime.UtcNow;
 
             foreach (var listing in listings)

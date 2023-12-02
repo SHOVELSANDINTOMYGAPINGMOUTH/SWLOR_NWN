@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
@@ -10,7 +11,6 @@ using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Enumeration;
 using SWLOR.Game.Server.Extension;
 using SWLOR.Game.Server.Feature.DialogDefinition;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.GuiService;
 using SWLOR.Game.Server.Service.LogService;
 using SWLOR.Game.Server.Service.PerkService;
@@ -363,12 +363,9 @@ namespace SWLOR.Game.Server.Service
             // step of this method.
             var propertyTypesWithLeases = new[]
             {
-                (int)PropertyType.Apartment,
+                PropertyType.Apartment,
             };
-            var query = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), propertyTypesWithLeases);
-            var queryCount = (int)DB.SearchCount(query);
-            var properties = DB.Search(query.AddPaging(queryCount, 0));
+            var properties = DB.WorldProperties.Where(x => propertyTypesWithLeases.Contains(x.PropertyType));
 
             foreach (var property in properties)
             {
@@ -383,10 +380,7 @@ namespace SWLOR.Game.Server.Service
             }
 
             // Remove any properties queued for deletion.
-            query = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.IsQueuedForDeletion), true);
-            queryCount = (int)DB.SearchCount(query);
-            properties = DB.Search(query.AddPaging(queryCount, 0));
+            properties = DB.WorldProperties.Where(x => x.IsQueuedForDeletion == true);
 
             foreach (var property in properties)
             {
@@ -396,10 +390,7 @@ namespace SWLOR.Game.Server.Service
 
             // Starship properties should have their current location wiped on every boot.
             // This ensures the player's ship doesn't get lost in space when they're thrown out of an instance.
-            var starshipQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Starship);
-            var starshipCount = (int)DB.SearchCount(starshipQuery);
-            var starshipProperties = DB.Search(starshipQuery.AddPaging(starshipCount, 0));
+            var starshipProperties = DB.WorldProperties.Where(x => x.PropertyType == PropertyType.Starship);
 
             foreach (var property in starshipProperties)
             {
@@ -439,11 +430,7 @@ namespace SWLOR.Game.Server.Service
         /// </summary>
         private static void ProcessCities()
         {
-            var cityQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.City)
-                .AddFieldSearch(nameof(WorldProperty.IsQueuedForDeletion), false);
-            var queryCount = (int)DB.SearchCount(cityQuery);
-            var cities = DB.Search(cityQuery.AddPaging(queryCount, 0));
+            var cities = DB.WorldProperties.Where(x => x.PropertyType == PropertyType.City && x.IsQueuedForDeletion == false);
             var now = DateTime.UtcNow;
 
             foreach (var city in cities)
@@ -472,13 +459,8 @@ namespace SWLOR.Game.Server.Service
 
         private static void ProcessCityCitizenRequirement(DateTime now, WorldProperty city)
         {
-            var citizenQuery = new DBQuery<Player>()
-                .AddFieldSearch(nameof(Player.CitizenPropertyId), city.Id, false)
-                .AddFieldSearch(nameof(Player.IsDeleted), false);
-            var citizenCount = (int)DB.SearchCount(citizenQuery);
-            var citizens = DB.Search(citizenQuery.AddPaging(citizenCount, 0))
-                .ToList();
-
+            var citizenCount = DB.Players.Count(x => x.CitizenPropertyId == city.Id && !x.IsDeleted);
+            
             // City is below the number of citizens required to maintain the city.
             if (citizenCount < _citizensRequired[1])
             {
@@ -522,17 +504,11 @@ namespace SWLOR.Game.Server.Service
 
             void TransferPermissions(string winnerPlayerId)
             {
-                var mayorPermission = DB.Search(new DBQuery<WorldPropertyPermission>()
-                        .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), incumbentMayorId, false)
-                        .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), city.Id, false))
-                    .Single();
-
+                var mayorPermission = DB.WorldPropertyPermissions.Single(x => x.PlayerId == incumbentMayorId && x.PropertyId == city.Id);
                 DB.Delete<WorldPropertyPermission>(mayorPermission.Id);
                 
-                var winnerPermission = DB.Search(new DBQuery<WorldPropertyPermission>()
-                        .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), winnerPlayerId, false)
-                        .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), city.Id, false))
-                    .SingleOrDefault() ?? new WorldPropertyPermission
+                var winnerPermission = 
+                    DB.WorldPropertyPermissions.SingleOrDefault(x => x.PlayerId == winnerPlayerId && x.PropertyId == city.Id) ?? new WorldPropertyPermission
                 {
                     PlayerId = winnerPlayerId,
                     PropertyId = city.Id
@@ -551,9 +527,7 @@ namespace SWLOR.Game.Server.Service
             if (city.IsQueuedForDeletion) return;
 
             Log.Write(LogGroup.Property, $"Election process starting for city {city.CustomName} ({city.Id})");
-            var election = DB.Search(new DBQuery<Election>()
-                .AddFieldSearch(nameof(Election.PropertyId), city.Id, false))
-                .SingleOrDefault();
+            var election = DB.Elections.SingleOrDefault(x => x.PropertyId == city.Id);
 
             // Election hasn't started yet.
             if (election == null)
@@ -692,9 +666,7 @@ namespace SWLOR.Game.Server.Service
             Log.Write(LogGroup.Property, $"Processing city level for '{city.CustomName}' ({city.Id})...");
 
             var mayor = DB.Get<Player>(city.OwnerPlayerId);
-            var citizenCount = DB.SearchCount(new DBQuery<Player>()
-                .AddFieldSearch(nameof(Player.CitizenPropertyId), city.Id, false)
-                .AddFieldSearch(nameof(Player.IsDeleted), false));
+            var citizenCount = DB.Players.Count(x => x.CitizenPropertyId == city.Id && !x.IsDeleted);
             var currentLevel = city.Upgrades[PropertyUpgradeType.CityLevel];
             var mayorLevel = mayor.Perks.ContainsKey(PerkType.CityManagement)
                 ? mayor.Perks[PerkType.CityManagement] + 1
@@ -813,13 +785,7 @@ namespace SWLOR.Game.Server.Service
         private static void ProcessCitizenshipFees(WorldProperty city)
         {
             Log.Write(LogGroup.Property, $"Processing citizenship fees for '{city.CustomName}' ({city.Id})");
-
-            var citizenQuery = new DBQuery<Player>()
-                .AddFieldSearch(nameof(Player.CitizenPropertyId), city.Id, false)
-                .AddFieldSearch(nameof(Player.IsDeleted), false);
-            var citizenCount = (int)DB.SearchCount(citizenQuery);
-            var citizens = DB.Search(citizenQuery.AddPaging(citizenCount, 0))
-                .ToList();
+            var citizens = DB.Players.Where(x => x.CitizenPropertyId == city.Id && !x.IsDeleted);
 
             foreach (var citizen in citizens)
             {
@@ -842,10 +808,7 @@ namespace SWLOR.Game.Server.Service
 
                 if (propertyIds.Count > 0)
                 {
-                    var query = new DBQuery<WorldProperty>()
-                        .AddFieldSearch(nameof(WorldProperty.Id), propertyIds);
-                    var queryCount = (int)DB.SearchCount(query);
-                    var children = DB.Search(query.AddPaging(queryCount, 0));
+                    var children = DB.WorldProperties.Where(x => propertyIds.Contains(x.Id));
 
                     foreach (var child in children)
                     {
@@ -855,10 +818,7 @@ namespace SWLOR.Game.Server.Service
             }
 
             // Clear permissions for the property.
-            var permissionsQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), property.Id, false);
-            var permissionsCount = (int)DB.SearchCount(permissionsQuery);
-            var permissions = DB.Search(permissionsQuery.AddPaging(permissionsCount, 0));
+            var permissions = DB.WorldPropertyPermissions.Where(x => x.PropertyId == property.Id);
 
             foreach (var permission in permissions)
             {
@@ -867,21 +827,13 @@ namespace SWLOR.Game.Server.Service
             }
 
             // Clear item categories and their permissions
-            var categoriesQuery = new DBQuery<WorldPropertyCategory>()
-                .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), property.Id, false);
-            var categoriesCount = (int)DB.SearchCount(categoriesQuery);
-            var categories = DB.Search(categoriesQuery.AddPaging(categoriesCount, 0))
-                .ToList();
+            var categories = DB.WorldPropertyCategories.Where(x => x.ParentPropertyId == property.Id);
             var categoryPropertyIds = categories.Select(s => s.Id).ToList();
 
             // Clear any permissions tied to categories.
             if (categoryPropertyIds.Count > 0)
             {
-                permissionsQuery = new DBQuery<WorldPropertyPermission>()
-                    .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), categoryPropertyIds);
-                permissionsCount = (int)DB.SearchCount(permissionsQuery);
-                permissions = DB.Search(permissionsQuery.AddPaging(permissionsCount, 0))
-                    .ToList();
+                permissions = DB.WorldPropertyPermissions.Where(x => categoryPropertyIds.Contains(x.PropertyId));
 
                 foreach (var permission in permissions)
                 {
@@ -898,10 +850,7 @@ namespace SWLOR.Game.Server.Service
             }
 
             // Clear any citizenship assignments on players who may be citizens of this property.
-            var citizenQuery = new DBQuery<Player>()
-                .AddFieldSearch(nameof(Player.CitizenPropertyId), property.Id, false);
-            var citizenCount = (int)DB.SearchCount(citizenQuery);
-            var citizens = DB.Search(citizenQuery.AddPaging(citizenCount, 0));
+            var citizens = DB.Players.Where(x => x.CitizenPropertyId == property.Id);
 
             foreach (var citizen in citizens)
             {
@@ -911,10 +860,7 @@ namespace SWLOR.Game.Server.Service
             }
 
             // Clear any bank items stored within this city.
-            var bankQuery = new DBQuery<InventoryItem>()
-                .AddFieldSearch(nameof(InventoryItem.StorageId), property.Id, false);
-            var bankCount = (int)DB.SearchCount(bankQuery);
-            var dbBankItems = DB.Search(bankQuery.AddPaging(bankCount, 0));
+            var dbBankItems = DB.InventoryItems.Where(x => x.StorageId == property.Id);
 
             foreach (var item in dbBankItems)
             {
@@ -934,19 +880,11 @@ namespace SWLOR.Game.Server.Service
         {
             foreach (var (type, permissions) in _permissionsByPropertyType)
             {
-                var propertyQuery = new DBQuery<WorldProperty>()
-                    .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)type);
-                var propertyCount = (int)DB.SearchCount(propertyQuery);
-                var dbProperties = DB.Search(propertyQuery.AddPaging(propertyCount, 0))
-                    .ToList();
+                var dbProperties = DB.WorldProperties.Where(x => x.PropertyType == type);
 
                 foreach (var property in dbProperties)
                 {
-                    var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                        .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), property.Id, false);
-                    var permissionCount = (int)DB.SearchCount(permissionQuery);
-                    var dbPropertyPermissions = DB.Search(permissionQuery.AddPaging(permissionCount, 0))
-                        .ToList();
+                    var dbPropertyPermissions = DB.WorldPropertyPermissions.Where(x => x.PropertyId == property.Id);
                     
                     foreach (var propertyPermission in dbPropertyPermissions)
                     {
@@ -1022,37 +960,20 @@ namespace SWLOR.Game.Server.Service
         {
             var instanceTypes = _propertyTypes
                 .Where(x => x.Value.SpawnType == PropertySpawnType.Instance)
-                .Select(s => (int)s.Key)
+                .Select(s => s.Key)
                 .ToList();
             var worldTypes = _propertyTypes
                 .Where(x => x.Value.SpawnType == PropertySpawnType.World)
-                .Select(s => (int)s.Key)
+                .Select(s => s.Key)
                 .ToList();
             var areaTypes = _propertyTypes
                 .Where(x => x.Value.SpawnType == PropertySpawnType.Area)
-                .Select(s => (int)s.Key)
+                .Select(s => s.Key)
                 .ToList();
-
-            var instanceQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), instanceTypes);
-            var instancePropertiesCount = DB.SearchCount(instanceQuery);
-            var instanceProperties = DB.Search(instanceQuery
-                .AddPaging((int)instancePropertiesCount, 0))
-                .ToList();
-
-            var worldQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), worldTypes);
-            var worldPropertiesCount = DB.SearchCount(worldQuery);
-            var worldProperties = DB.Search(worldQuery
-                .AddPaging((int)worldPropertiesCount, 0))
-                .ToList();
-
-            var areaQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), areaTypes);
-            var areaPropertiesCount = DB.SearchCount(areaQuery);
-            var areaProperties = DB.Search(areaQuery
-                .AddPaging((int)areaPropertiesCount, 0))
-                .ToList();
+            
+            var instanceProperties = DB.WorldProperties.Where(x => instanceTypes.Contains(x.PropertyType)).ToList();
+            var worldProperties = DB.WorldProperties.Where(x => worldTypes.Contains(x.PropertyType)).ToList();
+            var areaProperties = DB.WorldProperties.Where(x => areaTypes.Contains(x.PropertyType)).ToList();
 
             foreach (var property in instanceProperties)
             {
@@ -1492,15 +1413,13 @@ namespace SWLOR.Game.Server.Service
         /// <returns>A list of permissions</returns>
         public static List<WorldPropertyPermission> GetCategoryPermissions(string playerId, string propertyId)
         {
-            var categoriesQuery = new DBQuery<WorldPropertyCategory>()
-                .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), propertyId, false);
-            var categories = DB.Search(categoriesQuery).ToList();
-            var categoryIds = categories.Select(s => s.Id).ToList();
-
-            var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), categoryIds)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            var permissions = DB.Search(permissionQuery);
+            var categoryIds = DB.WorldPropertyCategories
+                .Where(x => x.ParentPropertyId == propertyId)
+                .Select(s => s.Id)
+                .ToList();
+            var permissions = DB.WorldPropertyPermissions
+                .Where(x => categoryIds.Contains(x.PropertyId) && 
+                            x.PlayerId == playerId);
 
             return permissions.ToList();
         }
@@ -1641,10 +1560,7 @@ namespace SWLOR.Game.Server.Service
                 return false;
 
             var playerId = GetObjectUUID(player);
-            var query = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            var permissions = DB.Search(query).FirstOrDefault();
+            var permissions = DB.WorldPropertyPermissions.FirstOrDefault(x => x.PropertyId == propertyId && x.PlayerId == playerId);
 
             // Player doesn't exist in the permissions list. No permission.
             if (permissions == null)
@@ -1672,10 +1588,7 @@ namespace SWLOR.Game.Server.Service
                 return false;
 
             var playerId = GetObjectUUID(player);
-            var query = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            var permissions = DB.Search(query).FirstOrDefault();
+            var permissions = DB.WorldPropertyPermissions.FirstOrDefault(x => x.PropertyId == propertyId && x.PlayerId == playerId);
 
             // Player doesn't exist in the permissions list. No permission.
             if (permissions == null)
@@ -1838,22 +1751,17 @@ namespace SWLOR.Game.Server.Service
             }
 
             var playerId = GetObjectUUID(player);
-            var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false);
-            var permission = DB.Search(permissionQuery).FirstOrDefault();
-
-            var categoryQuery = new DBQuery<WorldPropertyCategory>()
-                .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), propertyId, false);
-            var categoryIds = DB.Search(categoryQuery).Select(s => s.Id).ToList();
+            var permission = DB.WorldPropertyPermissions.FirstOrDefault(x => x.PlayerId == playerId && x.PropertyId == propertyId);
+            
+            var categoryIds = DB.WorldPropertyCategories
+                .Where(x => x.ParentPropertyId == propertyId)
+                .Select(s => s.Id)
+                .ToList();
             long categoryPermissionCount = 0;
 
             if (categoryIds.Count > 0)
             {
-                permissionQuery = new DBQuery<WorldPropertyPermission>()
-                    .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                    .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), categoryIds);
-                categoryPermissionCount = DB.SearchCount(permissionQuery);
+                categoryPermissionCount = DB.WorldPropertyPermissions.Count(x => x.PlayerId == playerId && categoryIds.Contains(x.PropertyId));
             }
 
             // Player can access this menu only if they have permission to manipulate structures,
@@ -1940,11 +1848,8 @@ namespace SWLOR.Game.Server.Service
                 FloatingTextStringOnCreature($"Structures may only be placed within player properties.", player, false);
                 return;
             }
-
-            var query = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false);
-            var permission = DB.Search(query).FirstOrDefault();
+            
+            var permission = DB.WorldPropertyPermissions.FirstOrDefault(x => x.PlayerId == playerId && x.PropertyId == propertyId);
 
             // Player must have permission to edit structures.
             if (permission == null ||
@@ -1958,11 +1863,7 @@ namespace SWLOR.Game.Server.Service
             var layout = GetLayoutByType(property.Layout);
             int structureLimit;
             var structureDetail = GetStructureByType(structureType);
-            var structureQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.ParentPropertyId), propertyId, false)
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Structure);
-            var structureQueryCount = (int)DB.SearchCount(structureQuery);
-            var structures = DB.Search(structureQuery.AddPaging(structureQueryCount, 0));
+            var structures = DB.WorldProperties.Where(x => x.ParentPropertyId == propertyId && x.PropertyType == PropertyType.Structure);
             int structureCount;
             string fixtureName;
 
@@ -2093,10 +1994,7 @@ namespace SWLOR.Game.Server.Service
             var entrance = GetEntrancePosition(interior.Layout);
             var position = Vector3(entrance.X, entrance.Y, entrance.Z);
             var location = Location(instance.Area, position, entrance.W);
-            var permission = DB.Search(new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), interiorId, false))
-                .SingleOrDefault();
+            var permission = DB.WorldPropertyPermissions.SingleOrDefault(x => x.PlayerId == playerId && x.PropertyId == interiorId);
 
             // Building is publicly accessible or the player has permission to enter.
             if (interior.IsPubliclyAccessible ||
@@ -2180,11 +2078,10 @@ namespace SWLOR.Game.Server.Service
             var dbProperty = DB.Get<WorldProperty>(propertyId);
             var dbBuilding = DB.Get<WorldProperty>(dbProperty.ParentPropertyId);
 
-            var permission = DB.Search(new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), dbBuilding.ParentPropertyId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false))
-                .SingleOrDefault();
-
+            var permission = DB.WorldPropertyPermissions
+                .SingleOrDefault(x => x.PropertyId == dbBuilding.ParentPropertyId && 
+                                      x.PlayerId == playerId);
+            
             // Player has at least one permission. Display the window.
             if (permission != null && (permission.Permissions[PropertyPermissionType.RenameProperty] ||
                                        permission.Permissions[PropertyPermissionType.EditTaxes] ||
@@ -2281,11 +2178,10 @@ namespace SWLOR.Game.Server.Service
                 return 0;
 
             // At least one building property of the given type must exist within the city.
-            var buildingCount = DB.SearchCount(new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.IsQueuedForDeletion), false)
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Structure)
-                .AddFieldSearch(nameof(WorldProperty.StructureType), (int)structureType)
-                .AddFieldSearch(nameof(WorldProperty.ParentPropertyId), cityId, false));
+            var buildingCount = DB.WorldProperties.Count(x => x.IsQueuedForDeletion == false &&
+                                                              x.PropertyType == PropertyType.Structure &&
+                                                              x.StructureType == structureType &&
+                                                              x.ParentPropertyId == cityId);
 
             if (buildingCount <= 0)
                 return 0;

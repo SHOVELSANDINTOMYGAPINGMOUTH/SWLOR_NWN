@@ -10,7 +10,6 @@ using SWLOR.Game.Server.Core.NWScript.Enum.Item;
 using SWLOR.Game.Server.Core.NWScript.Enum.VisualEffect;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Enumeration;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.GuiService;
 using SWLOR.Game.Server.Service.LogService;
 using SWLOR.Game.Server.Service.PerkService;
@@ -452,20 +451,15 @@ namespace SWLOR.Game.Server.Service
             var player = GetLastUsedBy();
             var playerId = GetObjectUUID(player);
             var propertyId = Property.GetPropertyId(area);
-            var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            var permission = DB.Search(permissionQuery).FirstOrDefault();
+            var permission = DB.WorldPropertyPermissions.FirstOrDefault(x => x.PropertyId == propertyId && x.PlayerId == playerId);
 
             if (permission == null || !permission.Permissions[PropertyPermissionType.PilotShip])
             {
                 SendMessageToPC(player, ColorToken.Red("You do not have permission to pilot this starship."));
                 return;
             }
-
-            var shipQuery = new DBQuery<PlayerShip>()
-                .AddFieldSearch(nameof(PlayerShip.PropertyId), propertyId, false);
-            var dbShip = DB.Search(shipQuery).FirstOrDefault();
+            
+            var dbShip = DB.PlayerShips.FirstOrDefault(x => x.PropertyId == propertyId);
 
             if (dbShip == null)
             {
@@ -1742,9 +1736,7 @@ namespace SWLOR.Game.Server.Service
         public static void PerformEmergencyExit(uint instance)
         {
             var propertyId = Property.GetPropertyId(instance);
-            var shipQuery = new DBQuery<PlayerShip>()
-                .AddFieldSearch(nameof(PlayerShip.PropertyId), propertyId, false);
-            var dbShip = DB.Search(shipQuery).FirstOrDefault();
+            var dbShip = DB.PlayerShips.FirstOrDefault(x => x.PropertyId == propertyId);
 
             if (dbShip == null)
                 return;
