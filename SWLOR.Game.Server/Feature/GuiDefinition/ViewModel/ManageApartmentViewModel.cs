@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Feature.GuiDefinition.Payload;
 using SWLOR.Game.Server.Service;
@@ -168,9 +169,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         private WorldProperty GetApartment()
         {
             var selectedPropertyId = _propertyIds[SelectedApartmentIndex];
-            var query = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.Id), selectedPropertyId, false);
-            var apartment = DB.Search(query).Single();
+            var apartment = DB.WorldProperties.Single(x => x.Id == selectedPropertyId);
 
             return apartment;
         }
@@ -179,11 +178,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         {
             var playerId = GetObjectUUID(Player);
             var selectedPropertyId = _propertyIds[SelectedApartmentIndex];
-            var query = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), selectedPropertyId, false);
-            var permission = DB.Search(query).FirstOrDefault()
-                             ?? new WorldPropertyPermission();
+            var permission = DB.WorldPropertyPermissions.FirstOrDefault(x => x.PlayerId == playerId && x.PropertyId == selectedPropertyId)
+                ?? new WorldPropertyPermission();
 
             return permission;
         }
@@ -207,24 +203,15 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             }
             else
             {
-                var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                    .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-                var permissionCount = (int)DB.SearchCount(permissionQuery);
-                var dbPermissions = DB.Search(permissionQuery
-                        .AddPaging(permissionCount, 0))
-                    .ToList();
+                var dbPermissions = DB.WorldPropertyPermissions.Where(x => x.PlayerId == playerId).ToList();
 
                 if (dbPermissions.Count > 0)
                 {
                     var propertyIds = dbPermissions.Select(s => s.PropertyId);
-                    var propertyQuery = new DBQuery<WorldProperty>()
-                        .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Apartment)
-                        .AddFieldSearch(nameof(WorldProperty.Id), propertyIds)
-                        .AddFieldSearch(nameof(WorldProperty.IsQueuedForDeletion), false);
-                    var propertyCount = (int)DB.SearchCount(propertyQuery);
-
-                    var properties = DB.Search(propertyQuery
-                        .AddPaging(propertyCount, 0));
+                    var properties = DB.WorldProperties.Where(x =>
+                        x.PropertyType == PropertyType.Apartment &&
+                        propertyIds.Contains(x.Id) &&
+                        !x.IsQueuedForDeletion);
 
                     foreach (var property in properties)
                     {

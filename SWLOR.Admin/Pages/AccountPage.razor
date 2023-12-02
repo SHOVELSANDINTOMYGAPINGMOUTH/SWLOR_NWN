@@ -1,5 +1,6 @@
 ﻿@page "/account"
 @using SWLOR.Game.Server.Service.AchievementService
+@using Redis.OM
 
 <h3>Accounts (@_totalRecords)</h3>
 
@@ -64,14 +65,6 @@
 
     protected void RefreshList()
     {
-        var query = new DBQuery<Account>();
-        _totalRecords = DB.SearchCount(query);
-
-        if (!string.IsNullOrWhiteSpace(_searchText))
-        {
-            query.AddFieldSearch(nameof(Account.Id), _searchText, true);
-        }
-
-        _accounts = DB.Search(query).ToList();
+        _accounts = DB.Accounts.Where(x => x.Id.Contains(_searchText)).ToList();
     }
 }

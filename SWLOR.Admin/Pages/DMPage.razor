@@ -1,5 +1,6 @@
 ﻿@page "/dm"
 @using SWLOR.Game.Server.Enumeration
+@using Redis.OM
 
 <h3>DMs (@_totalRecords)</h3>
 
@@ -55,14 +56,6 @@
 
 	protected void RefreshList()
 	{
-		var query = new DBQuery<AuthorizedDM>();
-		_totalRecords = DB.SearchCount(query);
-
-		if (!string.IsNullOrWhiteSpace(_searchText))
-		{
-		    query.AddFieldSearch(nameof(AuthorizedDM.Name), _searchText, true);
-		}
-
-	    _dms = DB.Search(query).ToList();
+	    _dms = DB.AuthorizedDMs.Where(x => x.Name.Contains(_searchText)).ToList();
 	}
 }

@@ -7,7 +7,7 @@ namespace SWLOR.Game.Server.Entity
     {
         [Indexed]
         public string PlayerId { get; set; }
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
         public string Data { get; set; }
 

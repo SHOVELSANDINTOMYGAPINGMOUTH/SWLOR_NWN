@@ -23,7 +23,7 @@ namespace SWLOR.Game.Server.Entity
         /// <summary>
         /// A custom name set by players.
         /// </summary>
-        [Indexed]
+        [Searchable]
         public string CustomName { get; set; }
 
         /// <summary>

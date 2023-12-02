@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
@@ -75,11 +77,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var bank = TetherObject;
             var storageId = GetLocalString(bank, "STORAGE_ID");
             var maxItems = GetLocalInt(bank, "STORAGE_ITEM_LIMIT");
-
-            var itemCount = DB.SearchCount(new DBQuery<InventoryItem>()
-                .AddFieldSearch(nameof(InventoryItem.StorageId), storageId, false)
-                .AddFieldSearch(nameof(InventoryItem.PlayerId), playerId, false));
-
+            
+            var itemCount = DB.InventoryItems.Count(x => x.StorageId == storageId && x.PlayerId == playerId);
             _itemCount = itemCount;
             ItemCountText = $"{itemCount} / {maxItems} Items";
             StoragePercentage = (float)itemCount / (float)maxItems;
@@ -98,17 +97,16 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var bank = TetherObject;
             var storageId = GetLocalString(bank, "STORAGE_ID");
 
-            var query = new DBQuery<InventoryItem>()
-                .AddFieldSearch(nameof(InventoryItem.StorageId), storageId, false)
-                .AddFieldSearch(nameof(InventoryItem.PlayerId), playerId, false);
-
+            var query = DB.InventoryItems
+                .Where(x => x.PlayerId == playerId && x.StorageId == storageId);
+            
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
-                query.AddFieldSearch(nameof(InventoryItem.Name), SearchText, true);
+                query = query.Where(x => x.Name.Contains(SearchText));;
             }
 
             _itemIds.Clear();
-            var items = DB.Search(query);
+            var items = query.ToList();
             var itemResrefs = new GuiBindingList<string>();
             var itemNames = new GuiBindingList<string>();
 

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Core.NWNX;
@@ -149,17 +151,18 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
 
         private void Search()
         {
-            var query = new DBQuery<DMCreature>()
-                .OrderBy(nameof(DMCreature.Name));                
+            var query = DB.DMCreatures
+                .OrderBy(o => o.Name);
 
-            if (!string.IsNullOrWhiteSpace(SearchText)) query.AddFieldSearch(nameof(DMCreature.Name), SearchText, true);
+            if (!string.IsNullOrWhiteSpace(SearchText))
+                query = query.Where(x => x.Name.Contains(SearchText));
 
-            query.AddPaging(ListingsPerPage, ListingsPerPage * SelectedPageIndex);
+            query = query
+                .Skip(ListingsPerPage * SelectedPageIndex)
+                .Take(ListingsPerPage);
 
-            var totalRecordCount = DB.SearchCount(query);
-            UpdatePagination(totalRecordCount);
-
-            var results = DB.Search(query);
+            var results = query.ToList();
+            UpdatePagination(results.Count);
 
             _creatureIds.Clear();
             var creatureNames = new GuiBindingList<string>();

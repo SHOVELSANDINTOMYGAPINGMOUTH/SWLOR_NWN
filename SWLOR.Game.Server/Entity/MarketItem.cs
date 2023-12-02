@@ -12,7 +12,7 @@ namespace SWLOR.Game.Server.Entity
         public string MarketName { get; set; }
         [Indexed]
         public string PlayerId { get; set; }
-        [Indexed]
+        [Searchable]
         public string SellerName { get; set; }
         [Indexed]
         public int Price { get; set; }

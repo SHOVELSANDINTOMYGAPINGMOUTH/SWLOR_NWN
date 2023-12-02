@@ -5,9 +5,9 @@ namespace SWLOR.Game.Server.Entity
     [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(DMCreature) })]
     public class DMCreature : EntityBase
     {
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
-        [Indexed]
+        [Searchable]
         public string Tag { get; set; }
         public string Data { get; set; }
 

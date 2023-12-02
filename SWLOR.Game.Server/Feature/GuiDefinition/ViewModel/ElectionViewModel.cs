@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.DBService;
@@ -60,9 +61,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var propertyId = Property.GetPropertyId(area);
             var dbProperty = DB.Get<WorldProperty>(propertyId);
             var dbBuilding = DB.Get<WorldProperty>(dbProperty.ParentPropertyId);
-            var election = DB.Search(new DBQuery<Election>()
-                .AddFieldSearch(nameof(Election.PropertyId), dbBuilding.ParentPropertyId, false))
-                .Single();
+            var election = DB.Elections.Single(x => x.PropertyId == dbBuilding.ParentPropertyId);
 
             if (election.Stage == ElectionStageType.Registration)
             {
@@ -88,9 +87,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             }
 
             var candidates = election.CandidatePlayerIds.Count > 0
-                ? DB.Search(new DBQuery<Player>()
-                    .AddFieldSearch(nameof(Entity.Player.Id), election.CandidatePlayerIds))
-                    .ToList()
+                ? DB.Players.Where(x => election.CandidatePlayerIds.Contains(x.Id)).ToList()
                 : new List<Player>();
             var candidateNames = new GuiBindingList<string>();
             var candidateToggles = new GuiBindingList<bool>();

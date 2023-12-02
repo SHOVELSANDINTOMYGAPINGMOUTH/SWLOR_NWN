@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Feature.GuiDefinition.Payload;
 using SWLOR.Game.Server.Service;
@@ -215,10 +216,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         {
             var playerId = GetObjectUUID(Player);
             var dbCity = DB.Get<WorldProperty>(_cityId);
-            var permission = DB.Search(new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), _cityId, false))
-                .Single();
+            var permission = DB.WorldPropertyPermissions.Single(x => x.PlayerId == playerId && x.PropertyId == _cityId);
 
             // Permissions
             CanAccessTreasury = permission.Permissions[PropertyPermissionType.AccessTreasury];
@@ -261,10 +259,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
 
         private void RefreshCitizenList()
         {
-            var dbCitizens = DB.Search(new DBQuery<Player>()
-                .AddFieldSearch(nameof(Entity.Player.CitizenPropertyId), _cityId, false)
-                .AddFieldSearch(nameof(Entity.Player.IsDeleted), false));
-
+            var dbCitizens = DB.Players.Where(x => x.CitizenPropertyId == _cityId && !x.IsDeleted).ToList();
             var citizenNames = new GuiBindingList<string>();
             var citizenCreditsOwed = new GuiBindingList<string>();
 
@@ -469,9 +464,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                     {
                         // Retrieve all interior property Ids in this city of the given type of property.
                         // I.E: All banks, all medical centers, etc.
-                        var instancePropertyIds = DB.Search(new DBQuery<WorldProperty>()
-                            .AddFieldSearch(nameof(WorldProperty.ParentPropertyId), _cityId, false)
-                            .AddFieldSearch(nameof(WorldProperty.StructureType), structureTypeIds))
+                        var instancePropertyIds = DB.WorldProperties
+                            .Where(x => x.ParentPropertyId == _cityId && 
+                                        structureTypeIds.Contains((int)x.StructureType))
                             .SelectMany(s => s.ChildPropertyIds[PropertyChildType.Interior]);
 
                         foreach (var propertyId in instancePropertyIds)

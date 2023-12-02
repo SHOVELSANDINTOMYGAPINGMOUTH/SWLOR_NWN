@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.DBService;
@@ -62,13 +63,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var dbBuilding = DB.Get<WorldProperty>(dbProperty.ParentPropertyId);
             var dbCity = DB.Get<WorldProperty>(dbBuilding.ParentPropertyId);
             var dbMayorPlayer = DB.Get<Player>(dbCity.OwnerPlayerId);
-            var dbElection = DB.Search(new DBQuery<Election>()
-                .AddFieldSearch(nameof(Election.PropertyId), dbCity.Id, false))
-                .SingleOrDefault();
-            var dbCitizenCount = DB.SearchCount(new DBQuery<Player>()
-                .AddFieldSearch(nameof(Entity.Player.CitizenPropertyId), dbCity.Id, false)
-                .AddFieldSearch(nameof(Entity.Player.IsDeleted), false));
-
+            var dbElection = DB.Elections.SingleOrDefault(x => x.PropertyId == dbCity.Id);
+            var dbCitizenCount = DB.Players.Count(x => x.CitizenPropertyId == dbCity.Id && !x.IsDeleted);
             var cityDetails = new GuiBindingList<string>();
 
             cityDetails.Add($"City Name: {dbCity.CustomName}");
@@ -177,8 +173,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                             : new List<string>();
 
                         // Pull back the full structure information
-                        var structures = DB.Search(new DBQuery<WorldProperty>()
-                            .AddFieldSearch(nameof(WorldProperty.Id), structureIds));
+                        var structures = DB.WorldProperties.Where(x => structureIds.Contains(x.Id)).ToList();
 
                         // Look for any structures that have interior children and return their Ids
                         var interiorPropertyIds = structures.SelectMany(s =>
@@ -190,9 +185,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                         interiorPropertyIds.Add(_cityPropertyId);
 
                         // Retrieve any permissions associated to this player across any structures in the city.
-                        var permissions = DB.Search(new DBQuery<WorldPropertyPermission>()
-                            .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), interiorPropertyIds)
-                            .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false));
+                        var permissions = DB.WorldPropertyPermissions.Where(x =>
+                            interiorPropertyIds.Contains(x.PropertyId) &&
+                            x.PlayerId == playerId);
 
                         // Remove the player's permissions, if any.
                         foreach (var permission in permissions)

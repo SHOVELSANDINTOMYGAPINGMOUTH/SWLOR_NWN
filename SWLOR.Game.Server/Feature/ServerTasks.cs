@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWNX.Enum;
@@ -68,11 +69,7 @@ namespace SWLOR.Game.Server.Feature
 
         private static void ApplyBans()
         {
-            var query = new DBQuery<PlayerBan>();
-
-            var dbBanCount = (int)DB.SearchCount(query);
-            var dbBans = DB.Search(query.AddPaging(dbBanCount, 0));
-
+            var dbBans = DB.PlayerBans.ToList();
             foreach (var ban in dbBans)
             {
                 AdministrationPlugin.AddBannedCDKey(ban.CDKey);

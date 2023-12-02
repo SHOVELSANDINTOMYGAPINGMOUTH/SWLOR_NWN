@@ -9,11 +9,11 @@ namespace SWLOR.Game.Server.Entity
         public string StorageId { get; set; }
         [Indexed]
         public string PlayerId { get; set; }
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
-        [Indexed]
+        [Searchable]
         public string Tag { get; set; }
-        [Indexed]
+        [Searchable]
         public string Resref { get; set; }
         public int Quantity { get; set; }
         public string Data { get; set; }

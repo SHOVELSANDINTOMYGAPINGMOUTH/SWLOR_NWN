@@ -96,7 +96,7 @@ namespace SWLOR.Game.Server.Entity
 
         [Indexed]
         public int Version { get; set; }
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
         public int MaxHP { get; set; }
         public int MaxFP { get; set; }
@@ -107,7 +107,7 @@ namespace SWLOR.Game.Server.Entity
         public int TemporaryFoodHP { get; set; }
         public int BAB { get; set; }
 
-        [Indexed]
+        [Searchable]
         public string LocationAreaResref { get; set; }
         public float LocationX { get; set; }
         public float LocationY { get; set; }
@@ -117,7 +117,7 @@ namespace SWLOR.Game.Server.Entity
         public float RespawnLocationY { get; set; }
         public float RespawnLocationZ { get; set; }
         public float RespawnLocationOrientation { get; set; }
-        [Indexed]
+        [Searchable]
         public string RespawnAreaResref { get; set; }
         public int UnallocatedXP { get; set; }
         public int UnallocatedSP { get; set; }

@@ -7,7 +7,7 @@ namespace SWLOR.Game.Server.Entity
     public abstract class EntityBase
     {
         [RedisIdField]
-        [Indexed]
+        [Searchable]
         public string Id { get; set; }
         
         public DateTime DateCreated { get; set; }

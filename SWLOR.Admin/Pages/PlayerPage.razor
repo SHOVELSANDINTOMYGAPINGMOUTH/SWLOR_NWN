@@ -1,4 +1,5 @@
 ﻿@page "/player"
+@using Redis.OM
 @inject NavigationManager NavManager
 
 <h3>Players (@_totalRecords)</h3>
@@ -62,16 +63,7 @@
 
 	protected void RefreshList()
 	{
-		var query = new DBQuery<Player>();
-
-	    _totalRecords = DB.SearchCount(query);
-
-		if (!string.IsNullOrWhiteSpace(_searchText))
-		{
-			query.AddFieldSearch(nameof(Player.Name), _searchText, true);
-		}
-
-		_players = DB.Search(query).ToList();
+	    _players = DB.Players.Where(x => x.Name.Contains(_searchText)).ToList();
 	}
 
 	protected override async Task OnInitializedAsync()

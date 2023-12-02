@@ -10,7 +10,7 @@ namespace SWLOR.Game.Server.Entity
     [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(Beast) })]
     public class Beast: EntityBase
     {
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
 
         [Indexed]

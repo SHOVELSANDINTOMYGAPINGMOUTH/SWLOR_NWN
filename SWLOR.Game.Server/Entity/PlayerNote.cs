@@ -7,15 +7,15 @@ namespace SWLOR.Game.Server.Entity
     {
         [Indexed]
         public string PlayerId { get; set; }
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
         public string Text { get; set; }
 
         [Indexed]
         public bool IsDMNote { get; set; }
-        [Indexed]
+        [Searchable]
         public string DMCreatorName { get; set; }
-        [Indexed]
+        [Searchable]
         public string DMCreatorCDKey { get; set; }
 
         public PlayerNote()

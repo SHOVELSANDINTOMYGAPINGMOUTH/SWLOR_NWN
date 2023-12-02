@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
@@ -64,8 +65,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             ActiveBanReason = string.Empty;
 
             _userIds.Clear();
-            var query = new DBQuery<PlayerBan>();
-            var users = DB.Search(query);
+            var users = DB.PlayerBans.ToList();
 
             var cdKeys = new GuiBindingList<string>();
             var toggles = new GuiBindingList<bool>();

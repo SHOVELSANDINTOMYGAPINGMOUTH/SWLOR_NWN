@@ -20,9 +20,7 @@ namespace SWLOR.Game.Server.Service
         private static readonly Dictionary<string, EntityBase> _cachedEntities = new();
 
         private static RedisConnectionProvider _provider;
-        private static readonly Dictionary<Type, string> _keyPrefixByType = new();
         private static readonly Dictionary<Type, Client> _searchClientsByType = new();
-        private static readonly Dictionary<Type, List<string>> _indexedPropertiesByName = new();
 
         [NWNEventHandler("mod_preload")]
         public static void Load()

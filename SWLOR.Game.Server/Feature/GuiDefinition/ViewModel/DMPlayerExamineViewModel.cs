@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
@@ -236,11 +237,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
 
             if (dbPlayer == null)
                 return;
-
-            var query = new DBQuery<PlayerNote>()
-                .AddFieldSearch(nameof(PlayerNote.PlayerId), _playerId, false)
-                .AddFieldSearch(nameof(PlayerNote.IsDMNote), true);
-            var dbNotes = DB.Search(query);
+            
+            var dbNotes = DB.PlayerNotes.Where(x => x.PlayerId == _playerId && x.IsDMNote);
 
             _noteIds.Clear();
             var noteNames = new GuiBindingList<string>();

@@ -14,7 +14,7 @@ namespace SWLOR.Game.Server.Entity
         [Indexed]
         public string ParentPropertyId { get; set; }
 
-        [Indexed]
+        [Searchable]
         public string Name { get; set; }
 
         public Dictionary<string, WorldPropertyItem> Items { get; set; }

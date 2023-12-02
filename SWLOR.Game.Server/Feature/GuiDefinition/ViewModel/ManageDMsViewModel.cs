@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Enumeration;
 using SWLOR.Game.Server.Service;
@@ -77,8 +78,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             SelectedRoleId = 0;
 
             _userIds.Clear();
-            var query = new DBQuery<AuthorizedDM>();
-            var users = DB.Search(query);
+            var users = DB.AuthorizedDMs.ToList();
 
             var names = new GuiBindingList<string>();
             var toggles = new GuiBindingList<bool>();

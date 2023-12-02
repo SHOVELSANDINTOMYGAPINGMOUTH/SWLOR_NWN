@@ -59,9 +59,7 @@ namespace SWLOR.Game.Server.Feature.PerkDefinition
                     }
 
                     // Player is currently running for election.
-                    var dbElection = DB.Search(new DBQuery<Election>()
-                        .AddFieldSearch(nameof(Election.PropertyId), dbCity.Id, false))
-                        .SingleOrDefault();
+                    var dbElection = DB.Elections.SingleOrDefault(x => x.PropertyId == dbCity.Id);
                     if (dbElection != null && dbElection.CandidatePlayerIds.Contains(playerId))
                     {
                         return "You are currently running for election. You cannot refund this perk until you withdraw from the race.";
