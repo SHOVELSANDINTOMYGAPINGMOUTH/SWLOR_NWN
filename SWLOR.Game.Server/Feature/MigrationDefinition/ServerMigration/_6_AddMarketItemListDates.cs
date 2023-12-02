@@ -1,7 +1,6 @@
 ﻿using System;
-using SWLOR.Game.Server.Entity;
+using System.Linq;
 using SWLOR.Game.Server.Service;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.MigrationService;
 
 namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
@@ -11,14 +10,8 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
         public int Version => 6;
         public void Migrate()
         {
-            var query = new DBQuery<MarketItem>()
-                .AddFieldSearch(nameof(MarketItem.IsListed), true);
-            var count = (int)DB.SearchCount(query);
-            var listings = DB.Search(query
-                .AddPaging(count, 0));
+            var listings = DB.MarketItems.ToList();
             var now = DateTime.UtcNow;
-
-
             foreach (var listing in listings)
             {
                 listing.DateListed = now;

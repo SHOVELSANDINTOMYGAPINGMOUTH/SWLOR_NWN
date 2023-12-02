@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 
 // ReSharper disable once CheckNamespace

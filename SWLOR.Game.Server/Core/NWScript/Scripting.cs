@@ -1,5 +1,4 @@
-﻿using NWN.Native.API;
-using SWLOR.Game.Server.Core.NWScript.Enum;
+﻿using SWLOR.Game.Server.Core.NWScript.Enum;
 
 namespace SWLOR.Game.Server.Core.NWScript
 {

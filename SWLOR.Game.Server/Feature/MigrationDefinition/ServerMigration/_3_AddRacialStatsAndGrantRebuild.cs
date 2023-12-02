@@ -1,8 +1,6 @@
-﻿using SWLOR.Game.Server.Core.NWScript.Enum;
-using SWLOR.Game.Server.Entity;
+﻿using System.Linq;
+using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Service;
-using SWLOR.Game.Server.Service.DBService;
-using SWLOR.Game.Server.Service.MigrationService;
 
 namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
 {
@@ -11,9 +9,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
         public int Version => 3;
         public void Migrate()
         {
-            var query = new DBQuery<Player>();
-            var playerCount = (int)DB.SearchCount(query);
-            var players = DB.Search(query.AddPaging(playerCount, 0));
+            var players = DB.Players.ToList();
 
             foreach (var player in players)
             {

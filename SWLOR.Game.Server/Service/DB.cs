@@ -1,51 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Newtonsoft.Json;
 using NRediSearch;
-using NReJSON;
+using Redis.OM;
+using Redis.OM.Searching;
 using StackExchange.Redis;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Entity;
-using SWLOR.Game.Server.Extension;
 using SWLOR.Game.Server.Service.DBService;
 
 namespace SWLOR.Game.Server.Service
 {
     public static class DB
     {
-        internal class JsonSerializer: ISerializerProxy
-        {
-            public TResult Deserialize<TResult>(RedisResult serializedValue)
-            {
-                return JsonConvert.DeserializeObject<TResult>(serializedValue.ToString());
-            }
-
-            public string Serialize<TObjectType>(TObjectType obj)
-            {
-                return JsonConvert.SerializeObject(obj);
-            }
-        }
-
         private static ApplicationSettings _appSettings;
-        private static readonly Dictionary<Type, string> _keyPrefixByType = new();
-        private static readonly Dictionary<Type, Client> _searchClientsByType = new();
-        private static readonly Dictionary<Type, List<string>> _indexedPropertiesByName = new();
         private static ConnectionMultiplexer _multiplexer;
         private static readonly Dictionary<string, EntityBase> _cachedEntities = new();
 
-        static DB()
-        {
-            NReJSONSerializer.SerializerProxy = new JsonSerializer();
-        }
+        private static RedisConnectionProvider _provider;
+        private static readonly Dictionary<Type, string> _keyPrefixByType = new();
+        private static readonly Dictionary<Type, Client> _searchClientsByType = new();
+        private static readonly Dictionary<Type, List<string>> _indexedPropertiesByName = new();
 
         [NWNEventHandler("mod_preload")]
         public static void Load()
         {
             _appSettings = ApplicationSettings.Get();
-
+            
             var options = new ConfigurationOptions
             {
                 AbortOnConnectFail = false,
@@ -53,14 +36,7 @@ namespace SWLOR.Game.Server.Service
             };
 
             _multiplexer = ConnectionMultiplexer.Connect(options);
-
-            Console.WriteLine($"Waiting for database connection. If this takes longer than 10 minutes, there's a problem.");
-            while (!_multiplexer.IsConnected)
-            {
-                // Spin
-                Thread.Sleep(100);
-            }
-            Console.WriteLine($"Database connection established.");
+            _provider = new RedisConnectionProvider(_multiplexer);
 
             LoadEntities();
 
@@ -69,13 +45,6 @@ namespace SWLOR.Game.Server.Service
             {
                 _cachedEntities.Clear();
             };
-
-            // This is a hack to ensure the background process of index scanning completes before we kick off
-            // the rest of the server initialization process.
-            // If we don't wait long enough, DB searches won't retrieve any data. If you have a better solution 
-            // please submit a fix, thanks!
-            Console.WriteLine($"Waiting {_appSettings.DatabaseBootDelaySeconds} seconds for background index scanning to complete.");
-            Thread.Sleep(_appSettings.DatabaseBootDelaySeconds * 1000);
 
             // CLI tools also use this class and don't have access to the NWN context.
             // Perform an environment variable check to ensure we're in the game server context before executing the event.
@@ -92,62 +61,15 @@ namespace SWLOR.Game.Server.Service
         {
             var type = entity.GetType();
 
-            // Drop any existing index
-            try
+            var success = _provider.Connection.CreateIndex(type);
+
+            if (success)
             {
-                // FT.DROPINDEX is used here in lieu of DropIndex() as it does not cause all documents to be lost.
-                _multiplexer.GetDatabase().Execute("FT.DROPINDEX", type.Name);
-                Console.WriteLine($"Dropped index for {type}");
+                Console.WriteLine($"Successfully created index: {type}");
             }
-            catch(Exception ex)
+            else
             {
-                if (ex.Message.Contains("Unknown Index name", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    Console.WriteLine($"Index does not exist for type {type}.");
-                }
-                else
-                {
-                    Console.WriteLine($"Issue dropping index for type {type}. Exception: {ex.ToMessageAndCompleteStacktrace()}");
-                }
-                
-            }
-
-            // Build the schema based on the IndexedAttribute associated to properties.
-            var schema = new Schema();
-            var indexedProperties = new List<string>();
-
-            foreach (var prop in type.GetProperties())
-            {
-                var attribute = prop.GetCustomAttribute(typeof(IndexedAttribute));
-                if (attribute != null)
-                {
-                    if (prop.PropertyType == typeof(int) ||
-                        prop.PropertyType == typeof(int?) ||
-                        prop.PropertyType == typeof(ulong) ||
-                        prop.PropertyType == typeof(ulong?) ||
-                        prop.PropertyType == typeof(long) ||
-                        prop.PropertyType == typeof(long?))
-                    {
-                        schema.AddNumericField(prop.Name);
-                    }
-                    else
-                    {
-                        schema.AddTextField(prop.Name);
-                    }
-
-                    indexedProperties.Add(prop.Name);
-                }
-
-            }
-
-            // Cache the indexed properties for quick look-up later.
-            _indexedPropertiesByName[type] = indexedProperties;
-
-            // Create the index.
-            if (schema.Fields.Count > 0)
-            {
-                _searchClientsByType[type].CreateIndex(schema, new Client.ConfiguredIndexOptions());
-                Console.WriteLine($"Created index for {type}");
+                Console.WriteLine($"Failed to create index: {type}");
             }
         }
 
@@ -166,13 +88,7 @@ namespace SWLOR.Game.Server.Service
             foreach (var entity in entityInstances)
             {
                 var type = entity.GetType();
-                // Register the type by itself first.
-                _keyPrefixByType[type] = type.Name;
-                
-                // Register the search client.
-                _searchClientsByType[type] = new Client(type.Name, _multiplexer.GetDatabase());
                 ProcessIndex(entity);
-
                 Console.WriteLine($"Registered type '{entity.GetType()}' using key prefix {type.Name}");
             }
         }
@@ -185,39 +101,7 @@ namespace SWLOR.Game.Server.Service
         public static void Set<T>(T entity)
             where T : EntityBase
         {
-            var type = typeof(T);
-            var data = JsonConvert.SerializeObject(entity);
-
-            var keyPrefix = _keyPrefixByType[type];
-            var indexKey = $"Index:{keyPrefix}:{entity.Id}";
-            var indexData = new Dictionary<string, RedisValue>();
-
-            foreach (var prop in _indexedPropertiesByName[type])
-            {
-                var property = type.GetProperty(prop);
-                var value = property?.GetValue(entity);
-
-                if (value != null)
-                {
-                    // Convert enums to numeric values
-                    if (property.PropertyType.IsEnum)
-                        value = (int) value;
-
-                    if (property.PropertyType == typeof(Guid))
-                    {
-                        value = EscapeTokens(((Guid) value).ToString());
-                    }
-
-                    if (property.PropertyType == typeof(string))
-                    {
-                        value = EscapeTokens((string) value);
-                    }
-
-                    indexData[prop] = (dynamic)value;
-                }
-            }
-            _searchClientsByType[type].ReplaceDocument(indexKey, indexData);
-            _multiplexer.GetDatabase().JsonSet($"{keyPrefix}:{entity.Id}", data);
+            _provider.RedisCollection<T>().Update(entity);
             _cachedEntities[entity.Id] = entity;
         }
 
@@ -230,21 +114,14 @@ namespace SWLOR.Game.Server.Service
         public static T Get<T>(string id)
             where T: EntityBase
         {
-            var keyPrefix = _keyPrefixByType[typeof(T)];
             if (_cachedEntities.ContainsKey(id))
             {
                 return (T)_cachedEntities[id];
             }
             else
             {
-                RedisValue data = _multiplexer.GetDatabase().JsonGet($"{keyPrefix}:{id}").ToString();
-                
-                if (string.IsNullOrWhiteSpace(data))
-                    return default;
-
-                var entity = JsonConvert.DeserializeObject<T>(data);
+                var entity = _provider.RedisCollection<T>().FindById(id);
                 _cachedEntities[id] = entity;
-
                 return entity;
             }
         }
@@ -258,13 +135,12 @@ namespace SWLOR.Game.Server.Service
         /// <returns>The raw json stored in the database under the specified key</returns>
         public static string GetRawJson<T>(string id)
         {
-            var keyPrefix = _keyPrefixByType[typeof(T)];
-            RedisValue data = _multiplexer.GetDatabase().JsonGet($"{keyPrefix}:{id}").ToString();
+            var entity = _provider.RedisCollection<T>().FindById(id);
 
-            if (string.IsNullOrWhiteSpace(data))
+            if (entity == null)
                 return string.Empty;
 
-            return data.ToString();
+            return JsonConvert.SerializeObject(entity);
         }
 
         /// <summary>
@@ -276,11 +152,8 @@ namespace SWLOR.Game.Server.Service
         public static bool Exists<T>(string id)
             where T : EntityBase
         {
-            var keyPrefix = _keyPrefixByType[typeof(T)];
-            if (_cachedEntities.ContainsKey(id))
-                return true;
-            else
-                return _multiplexer.GetDatabase().KeyExists($"{keyPrefix}:{id}");
+            return _cachedEntities.ContainsKey(id) || 
+                   _provider.RedisCollection<T>().Any();
         }
 
         /// <summary>
@@ -291,10 +164,8 @@ namespace SWLOR.Game.Server.Service
         public static void Delete<T>(string id)
             where T: EntityBase
         {
-            var keyPrefix = _keyPrefixByType[typeof(T)];
-            var indexKey = $"Index:{keyPrefix}:{id}";
-            _searchClientsByType[typeof(T)].DeleteDocument(indexKey);
-            _multiplexer.GetDatabase().JsonDelete($"{keyPrefix}:{id}");
+            var entity = _provider.RedisCollection<T>().FindById(id);
+            _provider.RedisCollection<T>().Delete(entity);
             _cachedEntities.Remove(id);
         }
 
@@ -320,6 +191,26 @@ namespace SWLOR.Game.Server.Service
                 .Replace("\"", "\\\"");
         }
 
+        public static IRedisCollection<Account> Accounts => _provider.RedisCollection<Account>();
+        public static IRedisCollection<AreaNote> AreaNotes => _provider.RedisCollection<AreaNote>();
+        public static IRedisCollection<AuthorizedDM> AuthorizedDMs => _provider.RedisCollection<AuthorizedDM>();
+        public static IRedisCollection<Beast> Beasts => _provider.RedisCollection<Beast>();
+        public static IRedisCollection<DMCreature> DMCreatures => _provider.RedisCollection<DMCreature>();
+        public static IRedisCollection<Election> Elections => _provider.RedisCollection<Election>();
+        public static IRedisCollection<InventoryItem> InventoryItems => _provider.RedisCollection<InventoryItem>();
+        public static IRedisCollection<MarketItem> MarketItems => _provider.RedisCollection<MarketItem>();
+        public static IRedisCollection<ModuleCache> ModuleCaches => _provider.RedisCollection<ModuleCache>();
+        public static IRedisCollection<Player> Players => _provider.RedisCollection<Player>();
+        public static IRedisCollection<PlayerBan> PlayerBans => _provider.RedisCollection<PlayerBan>();
+        public static IRedisCollection<PlayerNote> PlayerNotes => _provider.RedisCollection<PlayerNote>();
+        public static IRedisCollection<PlayerOutfit> PlayerOutfits => _provider.RedisCollection<PlayerOutfit>();
+        public static IRedisCollection<PlayerShip> PlayerShips => _provider.RedisCollection<PlayerShip>();
+        public static IRedisCollection<ServerConfiguration> ServerConfigurations => _provider.RedisCollection<ServerConfiguration>();
+        public static IRedisCollection<WorldProperty> WorldProperties => _provider.RedisCollection<WorldProperty>();
+        public static IRedisCollection<WorldPropertyCategory> WorldPropertyCategories => _provider.RedisCollection<WorldPropertyCategory>();
+        public static IRedisCollection<WorldPropertyPermission> WorldPropertyPermissions => _provider.RedisCollection<WorldPropertyPermission>();
+
+
         /// <summary>
         /// Searches the Redis DB for records matching the query criteria.
         /// </summary>
@@ -327,7 +218,7 @@ namespace SWLOR.Game.Server.Service
         /// <param name="query">The query to run.</param>
         /// <returns>An enumerable of entities matching the criteria.</returns>
         public static IEnumerable<T> Search<T>(DBQuery<T> query)
-            where T: EntityBase
+            where T : EntityBase
         {
             var result = _searchClientsByType[typeof(T)].Search(query.BuildQuery());
 
@@ -335,7 +226,7 @@ namespace SWLOR.Game.Server.Service
             {
                 // Remove the 'Index:' prefix.
                 var recordId = doc.Id.Remove(0, 6);
-                yield return _multiplexer.GetDatabase().JsonGet<T>(recordId);
+                yield return _provider.RedisCollection<T>().FindById(recordId);
             }
         }
 
@@ -346,7 +237,7 @@ namespace SWLOR.Game.Server.Service
         /// <param name="query">The query to run.</param>
         /// <returns>An enumerable of raw json values matching the criteria.</returns>
         public static IEnumerable<string> SearchRawJson<T>(DBQuery<T> query)
-            where T: EntityBase
+            where T : EntityBase
         {
             var result = _searchClientsByType[typeof(T)].Search(query.BuildQuery());
 
@@ -354,7 +245,8 @@ namespace SWLOR.Game.Server.Service
             {
                 // Remove the 'Index:' prefix.
                 var recordId = doc.Id.Remove(0, 6);
-                yield return _multiplexer.GetDatabase().JsonGet(recordId).ToString();
+                var entity = _provider.RedisCollection<T>().FindById(recordId);
+                yield return JsonConvert.SerializeObject(entity);
             }
         }
 
@@ -366,7 +258,7 @@ namespace SWLOR.Game.Server.Service
         /// <param name="query">The query to run.</param>
         /// <returns>The number of records matching the query criteria.</returns>
         public static long SearchCount<T>(DBQuery<T> query)
-            where T: EntityBase
+            where T : EntityBase
         {
             var result = _searchClientsByType[typeof(T)].Search(query.BuildQuery(true));
 

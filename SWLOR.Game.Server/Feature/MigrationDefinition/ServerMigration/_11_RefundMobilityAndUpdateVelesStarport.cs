@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using SWLOR.Game.Server.Entity;
+using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Service;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.LogService;
 using SWLOR.Game.Server.Service.MigrationService;
 using SWLOR.Game.Server.Service.PerkService;
@@ -26,12 +26,10 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
         private void UpdateVelesStarportShipLocations()
         {
             const string StarportResref = "velesinterior";
-
-            var dbQuery = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Starship);
-            var shipCount = (int)DB.SearchCount(dbQuery);
-            var dbShips = DB.Search(dbQuery
-                .AddPaging(shipCount, 0));
+            
+            var dbShips = DB.WorldProperties
+                .Where(x => x.PropertyType == PropertyType.Starship)
+                .ToList();
 
             var waypoint = GetWaypointByTag("VISCARA_LANDING");
             var position = GetPosition(waypoint);

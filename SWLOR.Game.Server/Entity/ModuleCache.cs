@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using Redis.OM.Modeling;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(ModuleCache) })]
     public class ModuleCache: EntityBase
     {
         public ModuleCache()

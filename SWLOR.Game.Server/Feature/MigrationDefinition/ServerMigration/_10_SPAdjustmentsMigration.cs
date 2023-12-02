@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Extension;
@@ -101,13 +103,11 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
 
         private void RemoveGrenadesRecast()
         {
-            var dbQuery = new DBQuery<Player>();
-            var playerCount = (int)DB.SearchCount(dbQuery);
-            var dbPlayersRaw = DB.SearchRawJson(dbQuery
-                .AddPaging(playerCount, 0));
+            var dbPlayers = DB.Players.ToList();
 
-            foreach (var dbPlayerJson in dbPlayersRaw)
+            foreach (var dbPlayer in dbPlayers)
             {
+                var dbPlayerJson = JsonConvert.SerializeObject(dbPlayer);
                 var jObject = JObject.Parse(dbPlayerJson);
                 var recastTimers = jObject["RecastTimes"];
 
@@ -116,9 +116,9 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
                     foreach (var token in recastTimers.FindTokens("Grenades"))
                         token.Rename("FragGrenade");
 
-                    var dbPlayer = jObject.ToObject<Player>();
+                    var updatedDbPlayer = jObject.ToObject<Player>();
 
-                    DB.Set(dbPlayer);
+                    DB.Set(updatedDbPlayer);
 
                     Log.Write(LogGroup.Migration, $"{dbPlayer.Name} ({dbPlayer.Id}): Replaced recast timer for Grenades.");
                 }

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System.Linq;
+using Newtonsoft.Json.Linq;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.CurrencyService;
@@ -13,12 +14,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
         public int Version => 9;
         public void Migrate()
         {
-            var dbQuery = new DBQuery<Player>();
-            var playerCount = (int)DB.SearchCount(dbQuery);
-
-            var dbPlayers = DB.Search(dbQuery
-                .AddPaging(playerCount, 0));
-
+            var dbPlayers = DB.Players.ToList();
             foreach (var dbPlayer in dbPlayers)
             {
                 var json = DB.GetRawJson<Player>(dbPlayer.Id);

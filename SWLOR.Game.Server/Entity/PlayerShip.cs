@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using Redis.OM.Modeling;
 using SWLOR.Game.Server.Service.SpaceService;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(PlayerShip) })]
     public class PlayerShip: EntityBase
     {
         public PlayerShip()

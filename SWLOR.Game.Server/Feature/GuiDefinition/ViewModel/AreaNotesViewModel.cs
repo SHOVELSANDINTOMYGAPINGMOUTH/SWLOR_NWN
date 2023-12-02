@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.GuiService;
 
 namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
@@ -122,13 +122,11 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                 return;
 
             _isLoadingNote = true;
-
-            var query = new DBQuery<AreaNote>()
-                .AddFieldSearch(nameof(AreaNote.AreaResref), AreaResrefs[SelectedAreaIndex], false)
-                .OrderBy(nameof(AreaNote.AreaResref));
-            var notes = DB.Search(query)
+            
+            var notes = DB.AreaNotes
+                .Where(x => x.AreaResref == AreaResrefs[SelectedAreaIndex])
+                .OrderBy(x => x.AreaResref)
                 .ToList();
-
             foreach (var note in notes)
             {
                 PrivateText = note.PrivateText;
@@ -154,12 +152,10 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             if (SelectedAreaIndex <= -1)
                 return;
 
-            var query = new DBQuery<AreaNote>()
-                .AddFieldSearch(nameof(AreaNote.AreaResref), AreaResrefs[SelectedAreaIndex], false)
-                .OrderBy(nameof(AreaNote.AreaResref));
-            var notes = DB.Search(query)
+            var notes = DB.AreaNotes
+                .Where(x => x.AreaResref == AreaResrefs[SelectedAreaIndex])
+                .OrderBy(x => x.AreaResref)
                 .ToList();
-
             foreach (var note in notes)
             {
                 note.PrivateText = PrivateText;

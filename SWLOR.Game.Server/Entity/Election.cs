@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using Redis.OM.Modeling;
 using SWLOR.Game.Server.Service.PropertyService;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(Election) })]
     public class Election: EntityBase
     {
         public Election()

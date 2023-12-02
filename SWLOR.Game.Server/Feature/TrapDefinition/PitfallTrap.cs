@@ -1,5 +1,4 @@
-﻿using System;
-using SWLOR.Game.Server.Core;
+﻿using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum.VisualEffect;
 

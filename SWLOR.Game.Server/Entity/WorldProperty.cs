@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using Redis.OM.Modeling;
 using SWLOR.Game.Server.Service.PropertyService;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(WorldProperty) })]
     public class WorldProperty: EntityBase
     {
         public WorldProperty()

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
@@ -18,9 +17,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
 
         private void MigratePersistentStorageItems()
         {
-            var query = new DBQuery<InventoryItem>();
-            var itemCount = (int)DB.SearchCount(query);
-            var items = DB.Search(query.AddPaging(itemCount, 0)).ToList();
+            var items = DB.InventoryItems.ToList();
             var tempStorage = GetObjectByTag("MIGRATION_STORAGE");
 
             foreach (var item in items)

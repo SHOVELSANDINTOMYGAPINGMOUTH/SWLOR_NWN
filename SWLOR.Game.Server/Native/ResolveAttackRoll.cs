@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using NWN.Native.API;
-using Pipelines.Sockets.Unofficial.Arenas;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;

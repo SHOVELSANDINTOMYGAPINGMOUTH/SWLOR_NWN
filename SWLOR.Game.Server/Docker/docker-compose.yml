@@ -2,7 +2,7 @@ version: "3.7"
 services:
     redis:
         hostname: redis
-        image: redislabs/redismod:latest
+        image: redis/redis-stack:latest
         volumes:
           - ${PWD-.}/redis:/data
         restart: unless-stopped

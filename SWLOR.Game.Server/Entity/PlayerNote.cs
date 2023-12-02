@@ -1,5 +1,8 @@
-﻿namespace SWLOR.Game.Server.Entity
+﻿using Redis.OM.Modeling;
+
+namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(PlayerNote) })]
     public class PlayerNote: EntityBase
     {
         [Indexed]

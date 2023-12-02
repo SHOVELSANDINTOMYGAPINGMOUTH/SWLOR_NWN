@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Redis.OM.Modeling;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Service.BeastMasteryService;
 using SWLOR.Game.Server.Service.CombatService;
@@ -6,6 +7,7 @@ using SWLOR.Game.Server.Service.PerkService;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(Beast) })]
     public class Beast: EntityBase
     {
         [Indexed]

@@ -1,10 +1,12 @@
 ﻿using System;
 using Newtonsoft.Json;
+using Redis.OM.Modeling;
 
 namespace SWLOR.Game.Server.Entity
 {
     public abstract class EntityBase
     {
+        [RedisIdField]
         [Indexed]
         public string Id { get; set; }
         

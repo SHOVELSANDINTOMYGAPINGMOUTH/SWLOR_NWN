@@ -11,7 +11,6 @@ using SWLOR.Game.Server.Service.SkillService;
 using InventorySlot = SWLOR.Game.Server.Core.NWScript.Enum.InventorySlot;
 using BaseItem = SWLOR.Game.Server.Core.NWScript.Enum.Item.BaseItem;
 using SavingThrow = SWLOR.Game.Server.Core.NWScript.Enum.SavingThrow;
-using SavingThrowType = SWLOR.Game.Server.Core.NWScript.Enum.SavingThrowType;
 
 namespace SWLOR.Game.Server.Service
 {

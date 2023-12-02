@@ -1,7 +1,7 @@
-﻿using SWLOR.Game.Server.Entity;
+﻿using System.Linq;
+using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.DBService;
-using SWLOR.Game.Server.Service.MigrationService;
 
 namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
 {
@@ -10,9 +10,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
         public int Version => 4;
         public void Migrate()
         {
-            var query = new DBQuery<PlayerNote>();
-            var noteCount = (int)DB.SearchCount(query);
-            var notes = DB.Search(query.AddPaging(noteCount, 0));
+            var notes = DB.PlayerNotes.ToList();
 
             foreach (var note in notes)
             {

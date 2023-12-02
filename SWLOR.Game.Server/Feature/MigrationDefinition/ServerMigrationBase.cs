@@ -1,10 +1,9 @@
-﻿using SWLOR.Game.Server.Entity;
-using SWLOR.Game.Server.Service;
+﻿using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.CurrencyService;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.LogService;
 using SWLOR.Game.Server.Service.PerkService;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SWLOR.Game.Server.Feature.MigrationDefinition
 {
@@ -12,11 +11,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition
     {
         protected void GrantRebuildTokenToAllPlayers()
         {
-            var query = new DBQuery<Player>();
-            var count = (int)DB.SearchCount(query);
-            var dbPlayers = DB.Search(query
-                .AddPaging(count, 0));
-
+            var dbPlayers = DB.Players.ToList();
             foreach (var dbPlayer in dbPlayers)
             {
                 if (!dbPlayer.Currencies.ContainsKey(CurrencyType.RebuildToken))
@@ -30,12 +25,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition
 
         protected void RefundPerksByMapping(Dictionary<(PerkType, int), int> refundMap)
         {
-            var dbQuery = new DBQuery<Player>();
-            var playerCount = (int)DB.SearchCount(dbQuery);
-
-            var dbPlayers = DB.Search(dbQuery
-                .AddPaging(playerCount, 0));
-
+            var dbPlayers = DB.Players.ToList();
             foreach (var dbPlayer in dbPlayers)
             {
                 var refundAmount = 0;

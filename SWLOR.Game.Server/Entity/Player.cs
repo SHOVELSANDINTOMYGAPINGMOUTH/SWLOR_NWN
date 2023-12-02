@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Redis.OM.Modeling;
 using SWLOR.Game.Server.Core.NWNX.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Enumeration;
@@ -19,6 +20,7 @@ using SWLOR.Game.Server.Service.TaxiService;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(Player) })]
     public class Player: EntityBase
     {
         public Player()

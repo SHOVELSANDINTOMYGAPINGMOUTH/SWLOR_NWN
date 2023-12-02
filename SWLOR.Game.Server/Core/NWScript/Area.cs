@@ -1,6 +1,5 @@
 using System;
 using System.Numerics;
-using NWN.Native.API;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum.Area;
 using ObjectType = SWLOR.Game.Server.Core.NWScript.Enum.ObjectType;

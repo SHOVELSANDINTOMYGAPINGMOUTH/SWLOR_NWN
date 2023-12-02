@@ -1,6 +1,5 @@
-﻿using SWLOR.Game.Server.Entity;
+﻿using System.Linq;
 using SWLOR.Game.Server.Service;
-using SWLOR.Game.Server.Service.DBService;
 using SWLOR.Game.Server.Service.MigrationService;
 
 namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
@@ -10,11 +9,7 @@ namespace SWLOR.Game.Server.Feature.MigrationDefinition.ServerMigration
         public int Version => 8;
         public void Migrate()
         {
-            var query = new DBQuery<Player>();
-            var playerCount = (int)DB.SearchCount(query);
-            var dbPlayers = DB.Search(query
-                .AddPaging(playerCount, 0));
-
+            var dbPlayers = DB.Players.ToList();
             foreach (var dbPlayer in dbPlayers)
             {
                 dbPlayer.Settings.DisplayServerResetReminders = true;

@@ -1,8 +1,10 @@
 ﻿using System;
+using Redis.OM.Modeling;
 using SWLOR.Game.Server.Service.PlayerMarketService;
 
 namespace SWLOR.Game.Server.Entity
 {
+    [Document(StorageType = StorageType.Json, Prefixes = new[] { nameof(MarketItem) })]
     public class MarketItem: EntityBase
     {
         [Indexed]
