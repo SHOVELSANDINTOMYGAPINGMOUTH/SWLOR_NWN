@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum.Associate;
 using SWLOR.Game.Server.Entity;
@@ -339,11 +340,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var playerId = GetObjectUUID(Player);
             var dbPlayer = DB.Get<Player>(playerId);
             var perkLevel = Perk.GetPerkLevel(Player, PerkType.Stabling) + 1;
-            var dbQuery = new DBQuery<Beast>()
-                .AddFieldSearch(nameof(Beast.OwnerPlayerId), playerId, false);
-            var dbBeasts = DB.Search(dbQuery)
-                .OrderBy(o => o.Name)
-                .ToList();
+            var dbBeasts = DB.Beasts.Where(x => x.OwnerPlayerId == playerId)
+                    .OrderBy(o => o.Name)
+                    .ToList();
 
             _beastIds.Clear();
             var beastNames = new GuiBindingList<string>();
@@ -568,10 +567,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                 Instructions = "Dismiss your active beast first.";
                 return;
             }
-
-            var dbQuery = new DBQuery<Beast>()
-                .AddFieldSearch(nameof(Beast.OwnerPlayerId), playerId, false);
-            var beastCount = DB.SearchCount(dbQuery);
+            
+            var beastCount = DB.Beasts.Count(x => x.OwnerPlayerId == playerId);
             var perkLevel = Perk.GetPerkLevel(Player, PerkType.Stabling) + 1;
             if (perkLevel < beastCount)
             {

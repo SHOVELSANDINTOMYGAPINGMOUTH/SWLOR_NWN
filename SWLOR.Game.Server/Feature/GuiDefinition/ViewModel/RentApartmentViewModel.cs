@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.DBService;
@@ -73,11 +74,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         private bool CanRentApartment()
         {
             var playerId = GetObjectUUID(Player);
-            var query = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.OwnerPlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Apartment)
-                .AddFieldSearch(nameof(WorldProperty.IsQueuedForDeletion), false);
-            var dbApartment = DB.Search(query).FirstOrDefault();
+            var dbApartment = DB.WorldProperties.FirstOrDefault(x => x.OwnerPlayerId == playerId &&
+                                                                     x.PropertyType == PropertyType.Apartment &&
+                                                                     !x.IsQueuedForDeletion);
 
             return dbApartment == null;
         }
@@ -149,11 +148,10 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                     }
 
                     var playerId = GetObjectUUID(Player);
-                    var query = new DBQuery<WorldProperty>()
-                        .AddFieldSearch(nameof(WorldProperty.OwnerPlayerId), playerId, false)
-                        .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Apartment)
-                        .AddFieldSearch(nameof(WorldProperty.IsQueuedForDeletion), false);
-                    var apartments = DB.Search(query).ToList();
+                    var apartments = DB.WorldProperties.Where(x =>
+                            x.OwnerPlayerId == playerId && x.PropertyType == PropertyType.Apartment &&
+                            !x.IsQueuedForDeletion)
+                        .ToList();
 
                     if (apartments.Count > 0)
                     {

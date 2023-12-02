@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Core.NWScript.Enum.Item;
@@ -78,10 +79,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         private List<PlayerOutfit> GetOutfits()
         {
             var playerId = GetObjectUUID(Player);
-            var dbOutfits = DB.Search(new DBQuery<PlayerOutfit>()
-                .AddFieldSearch(nameof(PlayerOutfit.PlayerId), playerId, false));
-
-            return dbOutfits.ToList();
+            return DB.PlayerOutfits.Where(x => x.PlayerId == playerId).ToList();
         }
 
         protected override void Initialize(GuiPayloadBase initialPayload)
@@ -329,8 +327,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         public Action OnClickNew() => () =>
         {
             var playerId = GetObjectUUID(Player);
-            var outfitCount = DB.SearchCount(new DBQuery<PlayerOutfit>()
-                .AddFieldSearch(nameof(PlayerOutfit.PlayerId), playerId, false));
+            var outfitCount = DB.PlayerOutfits.Count(x => x.PlayerId == playerId);
 
             if (outfitCount >= MaxOutfits)
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Entity;
 using SWLOR.Game.Server.Service;
 using SWLOR.Game.Server.Service.DBService;
@@ -85,11 +86,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         protected override void Initialize(GuiPayloadBase initialPayload)
         {
             var playerId = GetObjectUUID(Player);
-            var query = new DBQuery<PlayerNote>()
-                .AddFieldSearch(nameof(PlayerNote.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(PlayerNote.IsDMNote), false)
-                .OrderBy(nameof(PlayerNote.Name));
-            var notes = DB.Search(query)
+            var notes = DB.PlayerNotes
+                .Where(x => x.PlayerId == playerId && !x.IsDMNote)
+                .OrderBy(o => o.Name)
                 .ToList();
 
             _noteIds.Clear();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Entity;
@@ -137,9 +138,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         {
             var area = GetArea(Player);
             var propertyId = Property.GetPropertyId(area);
-            var query = new DBQuery<WorldPropertyCategory>()
-                .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), propertyId, false);
-            var categories = DB.Search(query).ToList();
+            var categories = DB.WorldPropertyCategories.Where(x => x.ParentPropertyId == propertyId);
             var itemCount = categories.Sum(x => x.Items.Count);
 
             return itemCount;
@@ -148,10 +147,10 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         private WorldPropertyPermission GetPropertyPermission(string playerId, string propertyId)
         {
             var property = DB.Get<WorldProperty>(propertyId);
-            var propertyPermissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false);
-            return DB.Search(propertyPermissionQuery).FirstOrDefault() ?? new WorldPropertyPermission
+            var permission = DB.WorldPropertyPermissions
+                .FirstOrDefault(x => x.PlayerId == playerId && x.PropertyId == propertyId);
+
+            return permission ?? new WorldPropertyPermission
             {
                 PropertyId = propertyId,
                 PlayerId = playerId,
@@ -162,10 +161,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
 
         private WorldPropertyPermission GetCategoryPermission(string playerId, string categoryId)
         {
-            var propertyPermissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), categoryId, false);
-            return DB.Search(propertyPermissionQuery).FirstOrDefault() ?? new WorldPropertyPermission
+            var permission = DB.WorldPropertyPermissions
+                .FirstOrDefault(x => x.PlayerId == playerId && x.PropertyId == categoryId);
+            return permission ?? new WorldPropertyPermission
             {
                 PropertyId = categoryId,
                 PlayerId = playerId,
@@ -193,16 +191,10 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var propertyId = Property.GetPropertyId(area);
             var property = DB.Get<WorldProperty>(propertyId);
             var propertyPermission = GetPropertyPermission(playerId, propertyId);
-
-            var categoriesQuery = new DBQuery<WorldPropertyCategory>()
-                .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), propertyId, false);
-            var categories = DB.Search(categoriesQuery).ToList();
+            
+            var categories = DB.WorldPropertyCategories.Where(x => x.ParentPropertyId == propertyId);
             var categoryIds = categories.Select(s => s.Id).ToList();
-
-            var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), categoryIds)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            var permissions = DB.Search(permissionQuery).ToList();
+            var permissions = DB.WorldPropertyPermissions.Where(x => categoryIds.Contains(x.PropertyId) && x.PlayerId == playerId);
 
             var categoryNames = new GuiBindingList<string>();
             var categoryToggles = new GuiBindingList<bool>();
@@ -288,10 +280,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var propertyPermission = GetPropertyPermission(playerId, propertyId);
             if (!propertyPermission.Permissions[PropertyPermissionType.EditCategories])
                 return;
-
-            var query = new DBQuery<WorldPropertyCategory>()
-                .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), propertyId, false);
-            var categoryCount = DB.SearchCount(query);
+            
+            var categoryCount = DB.WorldPropertyCategories.Count(x => x.ParentPropertyId == propertyId);
 
             if (categoryCount >= MaxNumberOfCategories)
             {
@@ -370,12 +360,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                         InstructionsColor = GuiColor.Red;
                         return;
                     }
-
-                    var query = new DBQuery<WorldPropertyPermission>()
-                        .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), categoryId, false);
                     
                     // Remove any permissions specific to this category.
-                    var permissions = DB.Search(query);
+                    var permissions = DB.WorldPropertyPermissions.Where(x => x.PropertyId == categoryId);
                     foreach (var permission in permissions)
                     {
                         DB.Delete<WorldPropertyPermission>(permission.Id);

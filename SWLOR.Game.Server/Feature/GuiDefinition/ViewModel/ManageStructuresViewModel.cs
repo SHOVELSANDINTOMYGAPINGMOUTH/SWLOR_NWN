@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Redis.OM;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum.VisualEffect;
 using SWLOR.Game.Server.Entity;
@@ -157,14 +158,12 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
 
             var structureNames = new GuiBindingList<string>();
             var structureToggles = new GuiBindingList<bool>();
-            var query = new DBQuery<WorldProperty>()
-                .AddFieldSearch(nameof(WorldProperty.ParentPropertyId), propertyId, false)
-                .AddFieldSearch(nameof(WorldProperty.PropertyType), (int)PropertyType.Structure);
-            var structureCount = DB.SearchCount(query);
-            UpdatePagination(structureCount);
+            var query = DB.WorldProperties.Where(x => x.ParentPropertyId == propertyId && x.PropertyType == PropertyType.Structure);
+            UpdatePagination(query.Count());
 
-            query.AddPaging(StructuresPerPage, SelectedPageIndex * StructuresPerPage);
-            var structures = DB.Search(query);
+            query = query.Skip(SelectedPageIndex * StructuresPerPage)
+                .Take(StructuresPerPage);
+            var structures = query.ToList();
             _structurePropertyIds.Clear();
 
             foreach (var structure in structures)
@@ -185,10 +184,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             var playerId = GetObjectUUID(Player);
             var area = GetArea(Player);
             var propertyId = Property.GetPropertyId(area);
-            var query = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), propertyId, false)
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            return DB.Search(query).FirstOrDefault();
+            return DB.WorldPropertyPermissions.FirstOrDefault(x => x.PropertyId == propertyId && x.PlayerId == playerId);
         }
 
         private void LoadPropertyPermissions(WorldProperty property)
@@ -410,9 +406,9 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
 
                 // Removing this structure would reduce the item storage cap below the number of items actually
                 // in storage.
-                var query = new DBQuery<WorldPropertyCategory>()
-                    .AddFieldSearch(nameof(WorldPropertyCategory.ParentPropertyId), structure.ParentPropertyId, false);
-                var categories = DB.Search(query).ToList();
+                var categories = DB.WorldPropertyCategories
+                    .Where(x => x.ParentPropertyId == structure.ParentPropertyId)
+                    .ToList();
                 var itemCount = categories.Sum(x => x.Items.Count);
 
                 if (itemCount > parentProperty.ItemStorageCount - structure.ItemStorageCount)

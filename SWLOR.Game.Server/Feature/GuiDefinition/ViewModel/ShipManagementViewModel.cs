@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
@@ -454,30 +455,23 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         private List<PlayerShip> GetMyShips()
         {
             var playerId = GetObjectUUID(Player);
-            var query = new DBQuery<PlayerShip>()
-                .AddFieldSearch(nameof(PlayerShip.OwnerPlayerId), playerId, false);
-            return DB.Search(query).ToList();
+            return DB.PlayerShips.Where(x => x.OwnerPlayerId == playerId).ToList();
         }
 
         private List<PlayerShip> GetOtherShips()
         {
             var playerId = GetObjectUUID(Player);
-            var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false);
-            var permissionCount = (int)DB.SearchCount(permissionQuery);
-            var propertyIds = DB.Search(permissionQuery.AddPaging(permissionCount, 0))
+            var propertyIds = DB.WorldPropertyPermissions.Where(x => x.PlayerId == playerId)
                 .Select(s => s.PropertyId)
                 .ToList();
 
             if (propertyIds.Count <= 0) 
                 return new List<PlayerShip>();
 
-            var shipQuery = new DBQuery<PlayerShip>()
-                .AddFieldSearch(nameof(PlayerShip.PropertyId), propertyIds);
-
-            var ships = DB.Search(shipQuery)
-                .Where(x => x.OwnerPlayerId != playerId)
-                .ToList();
+            var ships =
+                DB.PlayerShips
+                    .Where(x => propertyIds.Contains(x.PropertyId) && x.OwnerPlayerId != playerId)
+                    .ToList();
 
             return ships;
         }
@@ -513,9 +507,7 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             List<PlayerShip> dbPlayerShips;
             if (!string.IsNullOrWhiteSpace(initialPayload.SpecificPropertyId))
             {
-                var query = new DBQuery<PlayerShip>()
-                    .AddFieldSearch(nameof(PlayerShip.PropertyId), initialPayload.SpecificPropertyId, false);
-                dbPlayerShips = DB.Search(query).ToList();
+                dbPlayerShips = DB.PlayerShips.Where(x => x.PropertyId == initialPayload.SpecificPropertyId).ToList();
 
                 var dbProperty = DB.Get<WorldProperty>(initialPayload.SpecificPropertyId);
                 var spacePropertyLocation = dbProperty.Positions[PropertyLocationType.SpacePosition];
@@ -641,11 +633,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                 var ship = DB.Get<PlayerShip>(shipId);
                 var shipDetail = Space.GetShipDetailByItemTag(ship.Status.ItemTag);
                 var property = DB.Get<WorldProperty>(ship.PropertyId);
-
-                var permissionQuery = new DBQuery<WorldPropertyPermission>()
-                    .AddFieldSearch(nameof(WorldPropertyPermission.PlayerId), playerId, false)
-                    .AddFieldSearch(nameof(WorldPropertyPermission.PropertyId), ship.PropertyId, false);
-                var permission = DB.Search(permissionQuery).Single();
+                
+                var permission = DB.WorldPropertyPermissions.Single(x => x.PlayerId == playerId && x.PropertyId == ship.PropertyId);
                 var currentLocation = GetShipLocation(property);
                 var isAtCurrentLocation = currentLocation == GetArea(Player);
                 var gold = GetGold(Player);
@@ -1010,10 +999,8 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
                 }
 
                 var playerId = GetObjectUUID(Player);
-                var query = new DBQuery<PlayerShip>()
-                    .AddFieldSearch(nameof(PlayerShip.OwnerPlayerId), playerId, false);
-                var dbPlayerShips = DB.Search(query).ToList();
-
+                var dbPlayerShips = DB.PlayerShips.Where(x => x.OwnerPlayerId == playerId).ToList();
+                
                 if (dbPlayerShips.Count >= Space.MaxRegisteredShips)
                 {
                     FloatingTextStringOnCreature($"You may only have {Space.MaxRegisteredShips} ships registered at a time.", Player, false);

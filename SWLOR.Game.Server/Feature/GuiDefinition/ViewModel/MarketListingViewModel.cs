@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Core.NWScript.Enum;
 using SWLOR.Game.Server.Entity;
@@ -98,11 +100,11 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
             _itemPrices.Clear();
             var playerId = GetObjectUUID(Player);
             var market = PlayerMarket.GetMarketRegion(_regionType);
-            var query = new DBQuery<MarketItem>()
-                .AddFieldSearch(nameof(MarketItem.PlayerId), playerId, false)
-                .AddFieldSearch(nameof(MarketItem.MarketId), market.MarketId, false)
-                .OrderBy(nameof(MarketItem.Name));
-            var records = DB.Search(query);
+            var query = DB.MarketItems
+                .Where(x => x.PlayerId == playerId && x.MarketId == market.MarketId)
+                .OrderBy(o => o.Name);
+
+            var records = query.ToList();
             var count = 0;
 
             foreach (var record in records)

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Redis.OM;
 using SWLOR.Game.Server.Core;
 using SWLOR.Game.Server.Core.NWNX;
 using SWLOR.Game.Server.Entity;
@@ -147,25 +149,25 @@ namespace SWLOR.Game.Server.Feature.GuiDefinition.ViewModel
         private void Search()
         {
             var marketDetail = PlayerMarket.GetMarketRegion(_regionType);
-            var query = new DBQuery<MarketItem>()
-                .AddFieldSearch(nameof(MarketItem.IsListed), true)
-                .AddFieldSearch(nameof(MarketItem.MarketId), marketDetail.MarketId, false);
+            var query = DB.MarketItems
+                .Where(x => x.IsListed && x.MarketId == marketDetail.MarketId);
 
             if (!string.IsNullOrWhiteSpace(SearchText))
-                query.AddFieldSearch(nameof(MarketItem.Name), SearchText, true);
+                query = query.Where(x => x.MarketName.Contains(SearchText));
 
             if (_activeCategoryIdFilters.Count > 0)
             {
-                query.AddFieldSearch(nameof(MarketItem.Category), _activeCategoryIdFilters);
+                query = query.Where(x => _activeCategoryIdFilters.Contains((int)x.Category));
             }
 
-            query.AddPaging(ListingsPerPage, ListingsPerPage * SelectedPageIndex);
+            query = query.Skip(ListingsPerPage * SelectedPageIndex)
+                .Take(ListingsPerPage);
 
-            var totalRecordCount = DB.SearchCount(query);
+            var totalRecordCount = query.Count();
             UpdatePagination(totalRecordCount);
 
             var credits = GetGold(Player);
-            var results = DB.Search(query);
+            var results = query.ToList();
 
             _itemIds.Clear();
             _itemPrices.Clear();
